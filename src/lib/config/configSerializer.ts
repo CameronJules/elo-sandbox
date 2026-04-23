@@ -4,7 +4,6 @@ interface EditorConfig {
   rive: {
     src: string
     stateMachineName: string
-    bindings: { emotionInput: string; lookXInput: string; lookYInput: string }
     eyeOffset: { x: number; y: number }
   }
   llm: {
@@ -26,7 +25,7 @@ export const configSerializer = {
   save(): void {
     const s = useEditorStore.getState()
     const cfg: EditorConfig = {
-      rive: { src: s.rive.src, stateMachineName: s.rive.stateMachineName, bindings: s.rive.bindings, eyeOffset: s.eyeOffset },
+      rive: { src: s.rive.src, stateMachineName: s.rive.stateMachineName, eyeOffset: s.eyeOffset },
       llm: { provider: s.session.provider, voice: s.session.voice, systemPrompt: s.session.systemPrompt, tools: s.session.tools, maxTokens: s.session.maxTokens, interruptions: s.session.interruptions },
       faceTracker: { overlay: s.faceTracker.overlay, smoothing: s.faceTracker.smoothing, sensitivity: s.faceTracker.sensitivity },
     }
@@ -40,7 +39,6 @@ export const configSerializer = {
     const s = useEditorStore.getState()
     s.setRiveField('src', cfg.rive.src)
     s.setRiveField('stateMachineName', cfg.rive.stateMachineName)
-    s.setRiveField('bindings', cfg.rive.bindings)
     s.setEyeOffset(cfg.rive.eyeOffset)
     s.setSessionField('provider', cfg.llm.provider as 'openai' | 'mock')
     s.setSessionField('voice', cfg.llm.voice)
@@ -55,7 +53,7 @@ export const configSerializer = {
   exportJSON(): void {
     const s = useEditorStore.getState()
     const cfg: EditorConfig = {
-      rive: { src: s.rive.src, stateMachineName: s.rive.stateMachineName, bindings: s.rive.bindings, eyeOffset: s.eyeOffset },
+      rive: { src: s.rive.src, stateMachineName: s.rive.stateMachineName, eyeOffset: s.eyeOffset },
       llm: { provider: s.session.provider, voice: s.session.voice, systemPrompt: s.session.systemPrompt, tools: s.session.tools, maxTokens: s.session.maxTokens, interruptions: s.session.interruptions },
       faceTracker: { overlay: s.faceTracker.overlay, smoothing: s.faceTracker.smoothing, sensitivity: s.faceTracker.sensitivity },
     }
@@ -73,7 +71,6 @@ export const configSerializer = {
     const s = useEditorStore.getState()
     s.setRiveField('src', cfg.rive.src)
     s.setRiveField('stateMachineName', cfg.rive.stateMachineName)
-    s.setRiveField('bindings', cfg.rive.bindings)
     s.setEyeOffset(cfg.rive.eyeOffset)
     s.setSessionField('provider', cfg.llm.provider as 'openai' | 'mock')
     s.setSessionField('voice', cfg.llm.voice)

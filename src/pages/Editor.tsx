@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { TopMenuBar } from '@/components/TopMenuBar'
 import { LayerPanel } from '@/components/LayerPanel'
 import { ObservabilityPanel } from '@/components/ObservabilityPanel'
@@ -8,8 +9,18 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable'
+import { loadRiveFile, bufferToBlobUrl } from '@/lib/services/riveFileStorage'
+import { useEditorStore } from '@/lib/viewmodels/useEditorStore'
 
 export default function Editor() {
+  const resetRive = useEditorStore((s) => s.resetRive)
+
+  useEffect(() => {
+    loadRiveFile().then((buf) => {
+      if (!buf) return
+      resetRive(bufferToBlobUrl(buf))
+    }).catch(() => {/* no saved file */})
+  }, [])
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <TopMenuBar />

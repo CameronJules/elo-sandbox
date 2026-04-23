@@ -14,7 +14,6 @@ import { logger } from '@/lib/observability/logger'
 import { OpenAIRealtimeProvider } from '@/lib/modules/llm/openaiRealtimeProvider'
 import { MockLLMProvider } from '@/lib/modules/llm/mockProvider'
 import { microphoneService } from '@/lib/services/microphoneService'
-import { animationController } from '@/lib/viewmodels/animationController'
 import { useRef } from 'react'
 import type { RealtimeLLMProvider } from '@/lib/modules/llm/llm.interface'
 
@@ -46,9 +45,11 @@ export function TopMenuBar() {
         logger.log('llm', 'Audio response received')
       })
       provider.onToolCall((call) => {
-        animationController.handleToolCall(call)
+        if (call.name === 'setEmotion') {
+          useEditorStore.getState().setEmotion((call.args as { emotion: string }).emotion)
+        }
         provider.respondToolCall(call.id, { success: true })
-        logger.log('llm', `Animation emotion updated`)
+        logger.log('llm', `Tool call: ${call.name}`)
       })
       provider.onTranscript((delta, role) => {
         if (role === 'user') logger.log('llm', `User audio detected`)

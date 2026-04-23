@@ -1,62 +1,153 @@
+import { useRef, useCallback } from 'react'
 import { RiveViewer } from './RiveViewer'
 import { WebcamWithOverlay } from './WebcamWithOverlay'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select'
 import { useEditorStore } from '@/lib/viewmodels/useEditorStore'
+import { saveRiveFile, bufferToBlobUrl } from '@/lib/services/riveFileStorage'
+import { riveControllerRef } from '@/lib/viewmodels/riveController'
+import { Upload } from 'lucide-react'
+
+function useRiveUpload() {
+  const resetRive = useEditorStore((s) => s.resetRive)
+
+  return useCallback(async (file: File) => {
+    if (!file.name.endsWith('.riv')) return
+    const buffer = await file.arrayBuffer()
+    await saveRiveFile(buffer)
+    riveControllerRef.current = null
+    resetRive(bufferToBlobUrl(buffer))
+  }, [resetRive])
+}
+
+function UploadZone({ onFile }: { onFile: (f: File) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file) onFile(file)
+  }
+
+  return (
+    <div className="flex h-full w-full items-center justify-center">
+      <div
+        className="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed border-muted-foreground/30 p-12 text-center transition-colors hover:border-muted-foreground/60"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDrop}
+      >
+        <div className="flex size-14 items-center justify-center rounded-full bg-muted">
+          <Upload className="size-6 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">Drop a .riv file here</p>
+          <p className="mt-1 text-xs text-muted-foreground">or click to browse</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+          Choose file
+        </Button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".riv"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f) }}
+        />
+      </div>
+    </div>
+  )
+}
 
 export function MainCanvas() {
-  const { emotion, lookAt, rive, setRiveField } = useEditorStore()
+  const { emotion, lookAt, rive, setViewModelName, setRiveField } = useEditorStore()
+  const handleFile = useRiveUpload()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const hasFile = !!rive.src
 
   return (
     <div className="flex flex-col h-full">
       {/* Canvas header */}
-      <div className="flex items-center gap-3 border-b px-4 py-2">
-        <span className="text-sm font-medium">Rive Animation (Robot Eyes)</span>
+      <div className="flex items-center justify-between gap-3 border-b px-4 py-2">
+        <span className="text-sm font-medium">Rive Animation</span>
+        {hasFile && (
+          <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="size-3" />
+            Replace
+          </Button>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".riv"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+        />
       </div>
 
-      {/* State machine selector */}
-      <div className="flex items-center gap-3 border-b px-4 py-2">
-        <span className="text-xs text-muted-foreground">State Machine</span>
-        <Select
-          value={rive.stateMachineName}
-          onValueChange={(v) => setRiveField('stateMachineName', v)}
-        >
-          <SelectTrigger className="h-7 w-48 text-xs">
-            <SelectValue placeholder="Loading…" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {rive.availableStateMachines.map((sm) => (
-                <SelectItem key={sm} value={sm} className="text-xs">{sm}</SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* View model + state machine selectors — only when a file is loaded */}
+      {hasFile && (
+        <div className="flex items-center gap-4 border-b px-4 py-2">
+          <span className="text-xs text-muted-foreground">View Model</span>
+          {rive.availableViewModels.length > 0 ? (
+            <Select value={rive.viewModelName} onValueChange={setViewModelName}>
+              <SelectTrigger className="h-7 w-48 text-xs">
+                <SelectValue placeholder="Select view model…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {rive.availableViewModels.map((vm) => (
+                    <SelectItem key={vm} value={vm} className="text-xs">{vm}</SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">Loading…</span>
+          )}
 
-      {/* Main view — Rive + webcam overlay */}
+          <span className="text-xs text-muted-foreground">State Machine</span>
+          {rive.availableStateMachines.length > 0 ? (
+            <Select value={rive.stateMachineName} onValueChange={(v) => setRiveField('stateMachineName', v)}>
+              <SelectTrigger className="h-7 w-48 text-xs">
+                <SelectValue placeholder="Select state machine…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {rive.availableStateMachines.map((sm) => (
+                    <SelectItem key={sm} value={sm} className="text-xs">{sm}</SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">Loading…</span>
+          )}
+        </div>
+      )}
+
+      {/* Main view */}
       <div className="relative flex-1 min-h-0">
-        <RiveViewer />
-        {/* Webcam pinned bottom-left */}
+        {hasFile ? <RiveViewer /> : <UploadZone onFile={handleFile} />}
         <div className="absolute bottom-4 left-4 w-56">
           <p className="mb-1 text-xs text-muted-foreground">Webcam (Face Tracker)</p>
           <WebcamWithOverlay />
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between border-t px-4 py-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Emotion State</span>
-          <Badge>{emotion.charAt(0).toUpperCase() + emotion.slice(1)}</Badge>
+      {/* Footer — only when a file is loaded */}
+      {hasFile && (
+        <div className="flex items-center justify-between border-t px-4 py-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Emotion State</span>
+            <Badge>{emotion.charAt(0).toUpperCase() + emotion.slice(1)}</Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Look At (x, y)</span>
+            <span className="font-mono text-xs">{lookAt.x.toFixed(3)}, {lookAt.y.toFixed(3)}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Look At (x, y)</span>
-          <span className="font-mono text-xs">
-            {lookAt.x.toFixed(3)}, {lookAt.y.toFixed(3)}
-          </span>
-        </div>
-      </div>
+      )}
     </div>
   )
 }

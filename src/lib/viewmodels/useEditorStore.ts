@@ -9,6 +9,15 @@ export interface ToolDef {
   parameters: Record<string, unknown>
 }
 
+export type RiveVariableType = 'number' | 'integer' | 'boolean' | 'string' | 'trigger' | 'color' | 'enumType'
+
+export interface RiveVariable {
+  name: string
+  type: RiveVariableType
+  value: number | boolean | string | null
+  enumValues?: string[]
+}
+
 interface EditorState {
   selectedLayer: LayerKey
   emotion: string
@@ -30,11 +39,9 @@ interface EditorState {
     src: string
     stateMachineName: string
     availableStateMachines: string[]
-    bindings: {
-      emotionInput: string
-      lookXInput: string
-      lookYInput: string
-    }
+    viewModelName: string
+    availableViewModels: string[]
+    variables: RiveVariable[]
   }
 
   faceTracker: {
@@ -53,7 +60,12 @@ interface EditorState {
   setSessionField<K extends keyof EditorState['session']>(key: K, value: EditorState['session'][K]): void
 
   setRiveField<K extends keyof EditorState['rive']>(key: K, value: EditorState['rive'][K]): void
+  resetRive(src: string): void
   setAvailableStateMachines(names: string[]): void
+  setAvailableViewModels(names: string[]): void
+  setViewModelName(name: string): void
+  setVariables(vars: RiveVariable[]): void
+  setVariableValue(name: string, value: number | boolean | string | null): void
 
   setFaceTrackerField<K extends keyof EditorState['faceTracker']>(key: K, value: EditorState['faceTracker'][K]): void
 }
@@ -90,14 +102,12 @@ export const useEditorStore = create<EditorState>((set) => ({
   },
 
   rive: {
-    src: '/ees.riv',
+    src: '',
     stateMachineName: '',
     availableStateMachines: [],
-    bindings: {
-      emotionInput: '',
-      lookXInput: '',
-      lookYInput: '',
-    },
+    viewModelName: '',
+    availableViewModels: [],
+    variables: [],
   },
 
   faceTracker: {
@@ -116,12 +126,32 @@ export const useEditorStore = create<EditorState>((set) => ({
   setSessionField: (key, value) => set((s) => ({ session: { ...s.session, [key]: value } })),
 
   setRiveField: (key, value) => set((s) => ({ rive: { ...s.rive, [key]: value } })),
+  resetRive: (src) => set((s) => ({
+    rive: { ...s.rive, src, stateMachineName: '', availableStateMachines: [], viewModelName: '', availableViewModels: [], variables: [] },
+  })),
   setAvailableStateMachines: (names) =>
     set((s) => ({
       rive: {
         ...s.rive,
         availableStateMachines: names,
         stateMachineName: s.rive.stateMachineName || names[0] || '',
+      },
+    })),
+  setAvailableViewModels: (names) =>
+    set((s) => ({
+      rive: {
+        ...s.rive,
+        availableViewModels: names,
+        viewModelName: s.rive.viewModelName || names[0] || '',
+      },
+    })),
+  setViewModelName: (name) => set((s) => ({ rive: { ...s.rive, viewModelName: name } })),
+  setVariables: (vars) => set((s) => ({ rive: { ...s.rive, variables: vars } })),
+  setVariableValue: (name, value) =>
+    set((s) => ({
+      rive: {
+        ...s.rive,
+        variables: s.rive.variables.map((v) => (v.name === name ? { ...v, value } : v)),
       },
     })),
 

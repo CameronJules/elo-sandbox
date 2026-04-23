@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { webcamService } from '@/lib/services/webcamService'
 import { faceTrackingModule } from '@/lib/modules/faceTracking/mediaPipeFaceTracking'
-import { animationController } from '@/lib/viewmodels/animationController'
 import { useEditorStore } from '@/lib/viewmodels/useEditorStore'
 import { logger } from '@/lib/observability/logger'
 import type { FaceFrame } from '@/lib/modules/faceTracking/faceTracking.interface'
@@ -74,7 +73,7 @@ export function WebcamWithOverlay() {
       const nx = prev.x + (1 - smooth) * ((frame.nose.x - 0.5) * sens + 0.5 - prev.x)
       const ny = prev.y + (1 - smooth) * ((frame.nose.y - 0.5) * sens + 0.5 - prev.y)
       prevRef.current = { x: nx, y: ny }
-      animationController.setLookAt(nx, ny)
+      useEditorStore.getState().setLookAt(nx, ny)
     })
 
     return () => {
