@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Plus, Pencil, ChevronRight, Zap } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -21,6 +22,35 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <Label className="text-xs text-muted-foreground">{label}</Label>
       {children}
     </div>
+  )
+}
+
+function NumberInput({ variable, update }: { variable: RiveVariable; update: (v: number) => void }) {
+  const isInt = variable.type === 'integer'
+  const [raw, setRaw] = useState(String(variable.value ?? 0))
+
+  // Sync when the store value changes externally
+  useEffect(() => {
+    setRaw(String(variable.value ?? 0))
+  }, [variable.value])
+
+  const commit = (s: string) => {
+    const v = isInt ? parseInt(s) : parseFloat(s)
+    const safe = isNaN(v) ? 0 : v
+    setRaw(String(safe))
+    update(safe)
+  }
+
+  return (
+    <Input
+      type="number"
+      step="1"
+      value={raw}
+      className="h-7 w-28 text-xs"
+      onChange={(e) => setRaw(e.target.value)}
+      onBlur={(e) => commit(e.target.value)}
+      onKeyDown={(e) => { if (e.key === 'Enter') commit((e.target as HTMLInputElement).value) }}
+    />
   )
 }
 
@@ -88,20 +118,7 @@ function VariableControl({ variable }: { variable: RiveVariable }) {
   }
 
   if (variable.type === 'number' || variable.type === 'integer') {
-    return (
-      <Input
-        type="number"
-        step={variable.type === 'integer' ? '1' : '0.01'}
-        value={variable.value as number ?? 0}
-        className="h-7 w-28 text-xs"
-        onChange={(e) => {
-          const v = variable.type === 'integer'
-            ? parseInt(e.target.value) || 0
-            : parseFloat(e.target.value) || 0
-          update(v)
-        }}
-      />
-    )
+    return <NumberInput variable={variable} update={update} />
   }
 
   if (variable.type === 'string') {
@@ -334,14 +351,15 @@ function LLMProperties() {
   )
 }
 
-const LAYER_META = {
-  rive: { label: 'Rive Animation', sub: 'ees.riv', Icon: Eye },
-  llm: { label: 'LLM', sub: 'GPT Realtime', Icon: Bot },
-  face: { label: 'Face Tracker Webcam', sub: 'MediaPipe', Icon: Camera },
-}
-
 export function PropertiesPanel() {
-  const { selectedLayer } = useEditorStore()
+  const { selectedLayer, rive } = useEditorStore()
+
+  const LAYER_META = {
+    rive: { label: 'Rive Animation', sub: rive.fileName || 'No file loaded', Icon: Eye },
+    llm: { label: 'LLM', sub: 'GPT Realtime', Icon: Bot },
+    face: { label: 'Face Tracker Webcam', sub: 'MediaPipe', Icon: Camera },
+  }
+
   const meta = LAYER_META[selectedLayer]
   const { Icon } = meta
 

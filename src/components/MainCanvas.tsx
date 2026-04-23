@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { useEditorStore } from '@/lib/viewmodels/useEditorStore'
 import { saveRiveFile, bufferToBlobUrl } from '@/lib/services/riveFileStorage'
 import { riveControllerRef } from '@/lib/viewmodels/riveController'
-import { Upload } from 'lucide-react'
+import { Upload, Trash2 } from 'lucide-react'
 
 function useRiveUpload() {
   const resetRive = useEditorStore((s) => s.resetRive)
@@ -17,7 +17,7 @@ function useRiveUpload() {
     const buffer = await file.arrayBuffer()
     await saveRiveFile(buffer)
     riveControllerRef.current = null
-    resetRive(bufferToBlobUrl(buffer))
+    resetRive(bufferToBlobUrl(buffer), file.name)
   }, [resetRive])
 }
 
@@ -60,7 +60,7 @@ function UploadZone({ onFile }: { onFile: (f: File) => void }) {
 }
 
 export function MainCanvas() {
-  const { emotion, lookAt, rive, setViewModelName, setRiveField } = useEditorStore()
+  const { emotion, lookAt, rive, setViewModelName, setRiveField, clearRive } = useEditorStore()
   const handleFile = useRiveUpload()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const hasFile = !!rive.src
@@ -71,10 +71,21 @@ export function MainCanvas() {
       <div className="flex items-center justify-between gap-3 border-b px-4 py-2">
         <span className="text-sm font-medium">Rive Animation</span>
         {hasFile && (
-          <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="size-3" />
-            Replace
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="size-3" />
+              Replace
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 text-xs text-destructive hover:text-destructive"
+              onClick={() => { riveControllerRef.current = null; clearRive() }}
+            >
+              <Trash2 className="size-3" />
+              Remove
+            </Button>
+          </div>
         )}
         <input
           ref={fileInputRef}

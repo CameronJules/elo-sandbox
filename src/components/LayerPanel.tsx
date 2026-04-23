@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button'
 import { useEditorStore, type LayerKey } from '@/lib/viewmodels/useEditorStore'
 import { cn } from '@/lib/utils'
 
-const LAYERS: { key: LayerKey; label: string; sub: string; Icon: React.ElementType }[] = [
-  { key: 'rive', label: 'Rive Animation', sub: 'ees.riv', Icon: Eye },
-  { key: 'llm', label: 'LLM', sub: 'GPT Realtime', Icon: Bot },
-  { key: 'face', label: 'Face Tracker Webcam', sub: 'MediaPipe', Icon: Camera },
-]
-
 export function LayerPanel() {
-  const { selectedLayer, setSelectedLayer } = useEditorStore()
+  const { selectedLayer, setSelectedLayer, rive } = useEditorStore()
+
+  const LAYERS: { key: LayerKey; label: string; sub: string; Icon: React.ElementType }[] = [
+    { key: 'rive', label: 'Rive Animation', sub: rive.fileName || 'No file loaded', Icon: Eye },
+    { key: 'llm', label: 'LLM', sub: 'GPT Realtime', Icon: Bot },
+    { key: 'face', label: 'Face Tracker Webcam', sub: 'MediaPipe', Icon: Camera },
+  ]
 
   return (
     <Card className="flex flex-col h-full rounded-none border-0 border-b">

@@ -37,6 +37,7 @@ interface EditorState {
 
   rive: {
     src: string
+    fileName: string
     stateMachineName: string
     availableStateMachines: string[]
     viewModelName: string
@@ -60,7 +61,8 @@ interface EditorState {
   setSessionField<K extends keyof EditorState['session']>(key: K, value: EditorState['session'][K]): void
 
   setRiveField<K extends keyof EditorState['rive']>(key: K, value: EditorState['rive'][K]): void
-  resetRive(src: string): void
+  resetRive(src: string, fileName: string): void
+  clearRive(): void
   setAvailableStateMachines(names: string[]): void
   setAvailableViewModels(names: string[]): void
   setViewModelName(name: string): void
@@ -103,6 +105,7 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   rive: {
     src: '',
+    fileName: '',
     stateMachineName: '',
     availableStateMachines: [],
     viewModelName: '',
@@ -126,8 +129,11 @@ export const useEditorStore = create<EditorState>((set) => ({
   setSessionField: (key, value) => set((s) => ({ session: { ...s.session, [key]: value } })),
 
   setRiveField: (key, value) => set((s) => ({ rive: { ...s.rive, [key]: value } })),
-  resetRive: (src) => set((s) => ({
-    rive: { ...s.rive, src, stateMachineName: '', availableStateMachines: [], viewModelName: '', availableViewModels: [], variables: [] },
+  resetRive: (src, fileName) => set((s) => ({
+    rive: { ...s.rive, src, fileName, stateMachineName: '', availableStateMachines: [], viewModelName: '', availableViewModels: [], variables: [] },
+  })),
+  clearRive: () => set(() => ({
+    rive: { src: '', fileName: '', stateMachineName: '', availableStateMachines: [], viewModelName: '', availableViewModels: [], variables: [] },
   })),
   setAvailableStateMachines: (names) =>
     set((s) => ({
