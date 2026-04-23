@@ -340,11 +340,13 @@ function LLMProperties() {
         />
       </div>
 
-      <Row label="Max Response Tokens">
-        <Input
-          type="number"
-          value={session.maxTokens}
-          onChange={(e) => setSessionField('maxTokens', parseInt(e.target.value) || 1024)}
+      <Row label={`Interrupt Threshold (${session.vadThreshold.toFixed(2)})`}>
+        <Slider
+          min={0}
+          max={1}
+          step={0.01}
+          value={[session.vadThreshold]}
+          onValueChange={([v]) => setSessionField('vadThreshold', v)}
         />
       </Row>
     </div>

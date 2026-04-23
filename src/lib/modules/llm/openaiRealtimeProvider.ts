@@ -5,6 +5,8 @@ import { useTelemetry } from '@/lib/observability/telemetryStore'
 export class OpenAIRealtimeProvider implements RealtimeLLMProvider {
   private pc: RTCPeerConnection | null = null
   private dc: RTCDataChannel | null = null
+  private pendingMicTrack: MediaStreamTrack | null = null
+  private currentState: SessionStatus = 'idle'
   private audioHandlers: Array<(s: MediaStream) => void> = []
   private transcriptHandlers: Array<(d: string, r: 'user' | 'assistant') => void> = []
   private toolCallHandlers: Array<(c: ToolCall) => void> = []
@@ -13,6 +15,7 @@ export class OpenAIRealtimeProvider implements RealtimeLLMProvider {
   private connectTs = 0
 
   private emitState(s: SessionStatus) {
+    this.currentState = s
     useTelemetry.getState().updateLLM({ status: s })
     this.stateHandlers.forEach((h) => h(s))
   }
@@ -21,9 +24,26 @@ export class OpenAIRealtimeProvider implements RealtimeLLMProvider {
     this.emitState('connecting')
     logger.log('llm', 'Fetching ephemeral token')
 
-    const tokenRes = await fetch('/api/realtime-token', { method: 'POST' })
+    const tokenRes = await fetch('/api/realtime-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: cfg.model,
+        voice: cfg.voice,
+        systemPrompt: cfg.systemPrompt,
+        tools: cfg.tools,
+        interruptions: cfg.interruptions,
+        vadThreshold: cfg.vadThreshold,
+      }),
+    })
+    if (!tokenRes.ok) {
+      const errorBody = await tokenRes.text()
+      throw new Error(`Failed to fetch ephemeral token (${tokenRes.status}): ${errorBody}`)
+    }
     const tokenData = await tokenRes.json()
-    const ephemeralKey = tokenData.client_secret?.value
+    const ephemeralKey = tokenData.value ?? tokenData.client_secret?.value ?? tokenData.session?.client_secret?.value
     if (!ephemeralKey) throw new Error('Failed to get ephemeral token')
 
     this.connectTs = Date.now()
@@ -34,6 +54,10 @@ export class OpenAIRealtimeProvider implements RealtimeLLMProvider {
     this.pc.ontrack = (e) => {
       e.streams[0].getAudioTracks().forEach((t) => remoteStream.addTrack(t))
       this.audioHandlers.forEach((h) => h(remoteStream))
+    }
+
+    if (this.pendingMicTrack) {
+      this.pc.addTrack(this.pendingMicTrack)
     }
 
     // Data channel for events
@@ -48,9 +72,8 @@ export class OpenAIRealtimeProvider implements RealtimeLLMProvider {
             instructions: cfg.systemPrompt,
             voice: cfg.voice,
             input_audio_transcription: { model: 'whisper-1' },
-            turn_detection: cfg.interruptions ? { type: 'server_vad' } : null,
+            turn_detection: cfg.interruptions ? { type: 'server_vad', threshold: cfg.vadThreshold } : null,
             tools: cfg.tools.map((t) => ({ type: 'function', ...t })),
-            max_response_output_tokens: cfg.maxResponseTokens,
           },
         }),
       )
@@ -65,7 +88,7 @@ export class OpenAIRealtimeProvider implements RealtimeLLMProvider {
     const offer = await this.pc.createOffer()
     await this.pc.setLocalDescription(offer)
 
-    const sdpRes = await fetch(`https://api.openai.com/v1/realtime?model=${cfg.model}`, {
+    const sdpRes = await fetch('https://api.openai.com/v1/realtime/calls', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${ephemeralKey}`,
@@ -73,6 +96,10 @@ export class OpenAIRealtimeProvider implements RealtimeLLMProvider {
       },
       body: offer.sdp,
     })
+    if (!sdpRes.ok) {
+      const errorBody = await sdpRes.text()
+      throw new Error(`Failed to establish realtime session (${sdpRes.status}): ${errorBody}`)
+    }
     const answerSdp = await sdpRes.text()
     await this.pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
   }
@@ -102,11 +129,14 @@ export class OpenAIRealtimeProvider implements RealtimeLLMProvider {
       }
     } else if (type === 'error') {
       logger.error('llm', 'Realtime error', event.error)
-      this.emitState('error')
+      if (this.currentState !== 'connected') {
+        this.emitState('error')
+      }
     }
   }
 
   sendMicTrack(track: MediaStreamTrack): void {
+    this.pendingMicTrack = track
     if (this.pc) this.pc.addTrack(track)
   }
 
@@ -129,6 +159,7 @@ export class OpenAIRealtimeProvider implements RealtimeLLMProvider {
     this.pc?.close()
     this.pc = null
     this.dc = null
+    this.pendingMicTrack = null
     this.emitState('idle')
     logger.log('llm', 'Disconnected')
   }

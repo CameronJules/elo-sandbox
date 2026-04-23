@@ -30,8 +30,8 @@ interface EditorState {
     voice: string
     systemPrompt: string
     tools: ToolDef[]
-    maxTokens: number
     interruptions: boolean
+    vadThreshold: number
     autoStart: boolean
   }
 
@@ -98,8 +98,8 @@ export const useEditorStore = create<EditorState>((set) => ({
         },
       },
     ],
-    maxTokens: 1024,
     interruptions: true,
+    vadThreshold: 0.7,
     autoStart: false,
   },
 

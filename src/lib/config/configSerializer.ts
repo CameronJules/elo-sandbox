@@ -11,8 +11,9 @@ interface EditorConfig {
     voice: string
     systemPrompt: string
     tools: unknown[]
-    maxTokens: number
     interruptions: boolean
+    vadThreshold?: number
+    maxTokens?: number
   }
   faceTracker: {
     overlay: boolean
@@ -26,7 +27,7 @@ export const configSerializer = {
     const s = useEditorStore.getState()
     const cfg: EditorConfig = {
       rive: { src: s.rive.src, stateMachineName: s.rive.stateMachineName, eyeOffset: s.eyeOffset },
-      llm: { provider: s.session.provider, voice: s.session.voice, systemPrompt: s.session.systemPrompt, tools: s.session.tools, maxTokens: s.session.maxTokens, interruptions: s.session.interruptions },
+      llm: { provider: s.session.provider, voice: s.session.voice, systemPrompt: s.session.systemPrompt, tools: s.session.tools, interruptions: s.session.interruptions, vadThreshold: s.session.vadThreshold },
       faceTracker: { overlay: s.faceTracker.overlay, smoothing: s.faceTracker.smoothing, sensitivity: s.faceTracker.sensitivity },
     }
     localStorage.setItem('elo-editor-config', JSON.stringify(cfg))
@@ -43,8 +44,8 @@ export const configSerializer = {
     s.setSessionField('provider', cfg.llm.provider as 'openai' | 'mock')
     s.setSessionField('voice', cfg.llm.voice)
     s.setSessionField('systemPrompt', cfg.llm.systemPrompt)
-    s.setSessionField('maxTokens', cfg.llm.maxTokens)
     s.setSessionField('interruptions', cfg.llm.interruptions)
+    s.setSessionField('vadThreshold', cfg.llm.vadThreshold ?? 0.7)
     s.setFaceTrackerField('overlay', cfg.faceTracker.overlay)
     s.setFaceTrackerField('smoothing', cfg.faceTracker.smoothing)
     s.setFaceTrackerField('sensitivity', cfg.faceTracker.sensitivity)
@@ -54,7 +55,7 @@ export const configSerializer = {
     const s = useEditorStore.getState()
     const cfg: EditorConfig = {
       rive: { src: s.rive.src, stateMachineName: s.rive.stateMachineName, eyeOffset: s.eyeOffset },
-      llm: { provider: s.session.provider, voice: s.session.voice, systemPrompt: s.session.systemPrompt, tools: s.session.tools, maxTokens: s.session.maxTokens, interruptions: s.session.interruptions },
+      llm: { provider: s.session.provider, voice: s.session.voice, systemPrompt: s.session.systemPrompt, tools: s.session.tools, interruptions: s.session.interruptions, vadThreshold: s.session.vadThreshold },
       faceTracker: { overlay: s.faceTracker.overlay, smoothing: s.faceTracker.smoothing, sensitivity: s.faceTracker.sensitivity },
     }
     const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' })
@@ -75,8 +76,8 @@ export const configSerializer = {
     s.setSessionField('provider', cfg.llm.provider as 'openai' | 'mock')
     s.setSessionField('voice', cfg.llm.voice)
     s.setSessionField('systemPrompt', cfg.llm.systemPrompt)
-    s.setSessionField('maxTokens', cfg.llm.maxTokens)
     s.setSessionField('interruptions', cfg.llm.interruptions)
+    s.setSessionField('vadThreshold', cfg.llm.vadThreshold ?? 0.7)
     s.setFaceTrackerField('overlay', cfg.faceTracker.overlay)
     s.setFaceTrackerField('smoothing', cfg.faceTracker.smoothing)
     s.setFaceTrackerField('sensitivity', cfg.faceTracker.sensitivity)

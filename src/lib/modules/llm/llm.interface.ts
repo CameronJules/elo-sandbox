@@ -11,8 +11,8 @@ export interface RealtimeConfig {
   systemPrompt: string
   tools: ToolDefinition[]
   model: string
-  maxResponseTokens: number
   interruptions: boolean
+  vadThreshold: number
 }
 
 export interface ToolCall {

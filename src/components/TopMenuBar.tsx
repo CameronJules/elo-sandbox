@@ -26,6 +26,8 @@ export function TopMenuBar() {
 
   const isActive = session.status === 'connected'
   const isConnecting = session.status === 'connecting'
+  const canStart = session.status === 'idle'
+  const canStop = session.status !== 'idle'
 
   async function startSession() {
     setSessionStatus('connecting')
@@ -66,8 +68,8 @@ export function TopMenuBar() {
         systemPrompt: session.systemPrompt,
         tools: session.tools,
         model: 'gpt-4o-realtime-preview-2024-12-17',
-        maxResponseTokens: session.maxTokens,
         interruptions: session.interruptions,
+        vadThreshold: session.vadThreshold,
       })
     } catch (err) {
       logger.error('system', 'Session failed', err)
@@ -140,7 +142,7 @@ export function TopMenuBar() {
       <div className="flex flex-1 items-center justify-center gap-3">
         <Button
           size="sm"
-          disabled={isActive || isConnecting}
+          disabled={!canStart}
           onClick={startSession}
           className="gap-2"
         >
@@ -150,7 +152,7 @@ export function TopMenuBar() {
         <Button
           variant="outline"
           size="sm"
-          disabled={!isActive}
+          disabled={!canStop}
           onClick={stopSession}
         >
           <Square data-icon="inline-start" />
