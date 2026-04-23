@@ -16,7 +16,7 @@ function useRiveUpload() {
   return useCallback(async (file: File) => {
     if (!file.name.endsWith('.riv')) return
     const buffer = await file.arrayBuffer()
-    await saveRiveFile(buffer)
+    await saveRiveFile(buffer, file.name)
     riveControllerRef.current = null
     resetRive(bufferToBlobUrl(buffer), file.name)
   }, [resetRive])

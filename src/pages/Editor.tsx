@@ -16,9 +16,9 @@ export default function Editor() {
   const resetRive = useEditorStore((s) => s.resetRive)
 
   useEffect(() => {
-    loadRiveFile().then((buf) => {
-      if (!buf) return
-      resetRive(bufferToBlobUrl(buf))
+    loadRiveFile().then((saved) => {
+      if (!saved) return
+      resetRive(bufferToBlobUrl(saved.buffer), saved.fileName)
     }).catch(() => {/* no saved file */})
   }, [])
   return (

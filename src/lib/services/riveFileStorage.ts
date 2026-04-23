@@ -1,6 +1,7 @@
 const DB_NAME = 'elo-sandbox'
 const STORE_NAME = 'files'
 const FILE_KEY = 'rive'
+const FILE_NAME_KEY = 'rive-name'
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -11,23 +12,31 @@ function openDB(): Promise<IDBDatabase> {
   })
 }
 
-export async function saveRiveFile(buffer: ArrayBuffer): Promise<void> {
+export async function saveRiveFile(buffer: ArrayBuffer, fileName: string): Promise<void> {
   const db = await openDB()
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite')
-    tx.objectStore(STORE_NAME).put(buffer, FILE_KEY)
+    const store = tx.objectStore(STORE_NAME)
+    store.put(buffer, FILE_KEY)
+    store.put(fileName, FILE_NAME_KEY)
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
   })
 }
 
-export async function loadRiveFile(): Promise<ArrayBuffer | null> {
+export async function loadRiveFile(): Promise<{ buffer: ArrayBuffer; fileName: string } | null> {
   const db = await openDB()
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly')
-    const req = tx.objectStore(STORE_NAME).get(FILE_KEY)
-    req.onsuccess = () => resolve((req.result as ArrayBuffer) ?? null)
-    req.onerror = () => reject(req.error)
+    const store = tx.objectStore(STORE_NAME)
+    const bufReq = store.get(FILE_KEY)
+    const nameReq = store.get(FILE_NAME_KEY)
+    tx.oncomplete = () => {
+      const buffer = bufReq.result as ArrayBuffer | undefined
+      if (!buffer) { resolve(null); return }
+      resolve({ buffer, fileName: (nameReq.result as string | undefined) ?? '' })
+    }
+    tx.onerror = () => reject(tx.error)
   })
 }
 
