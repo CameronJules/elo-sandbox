@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select'
 import { useEditorStore } from '@/lib/viewmodels/useEditorStore'
+import { useTelemetry } from '@/lib/observability/telemetryStore'
 import { saveRiveFile, bufferToBlobUrl } from '@/lib/services/riveFileStorage'
 import { riveControllerRef } from '@/lib/viewmodels/riveController'
 import { Upload, Trash2 } from 'lucide-react'
@@ -60,7 +61,8 @@ function UploadZone({ onFile }: { onFile: (f: File) => void }) {
 }
 
 export function MainCanvas() {
-  const { emotion, lookAt, rive, setViewModelName, setRiveField, clearRive } = useEditorStore()
+  const { lookAt, rive, setViewModelName, setRiveField, clearRive } = useEditorStore()
+  const faceEmotion = useTelemetry((s) => s.face.emotion)
   const handleFile = useRiveUpload()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const hasFile = !!rive.src
@@ -151,7 +153,7 @@ export function MainCanvas() {
         <div className="flex items-center justify-between border-t px-4 py-2">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Emotion State</span>
-            <Badge>{emotion.charAt(0).toUpperCase() + emotion.slice(1)}</Badge>
+            <Badge>{faceEmotion.charAt(0).toUpperCase() + faceEmotion.slice(1)}</Badge>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Look At (x, y)</span>

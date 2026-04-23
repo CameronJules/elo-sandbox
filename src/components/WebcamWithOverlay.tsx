@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import { webcamService } from '@/lib/services/webcamService'
 import { faceTrackingModule } from '@/lib/modules/faceTracking/mediaPipeFaceTracking'
 import { useEditorStore } from '@/lib/viewmodels/useEditorStore'
+import { useTelemetry } from '@/lib/observability/telemetryStore'
 import { logger } from '@/lib/observability/logger'
 import type { FaceFrame } from '@/lib/modules/faceTracking/faceTracking.interface'
 
@@ -74,6 +75,7 @@ export function WebcamWithOverlay() {
       const ny = prev.y + (1 - smooth) * ((frame.nose.y - 0.5) * sens + 0.5 - prev.y)
       prevRef.current = { x: nx, y: ny }
       useEditorStore.getState().setLookAt(nx, ny)
+      useTelemetry.getState().updateFace({ emotion: frame.emotion })
     })
 
     return () => {
