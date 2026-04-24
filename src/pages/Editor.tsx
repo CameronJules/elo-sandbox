@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { TopMenuBar } from '@/components/TopMenuBar'
 import { LayerPanel } from '@/components/LayerPanel'
 import { ObservabilityPanel } from '@/components/ObservabilityPanel'
 import { MainCanvas } from '@/components/MainCanvas'
@@ -23,7 +22,6 @@ export default function Editor() {
   }, [])
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
-      <TopMenuBar />
       <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
         {/* Left sidebar */}
         <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>

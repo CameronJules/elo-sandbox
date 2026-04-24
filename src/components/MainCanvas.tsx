@@ -8,7 +8,7 @@ import { useEditorStore } from '@/lib/viewmodels/useEditorStore'
 import { useTelemetry } from '@/lib/observability/telemetryStore'
 import { saveRiveFile, bufferToBlobUrl } from '@/lib/services/riveFileStorage'
 import { riveControllerRef } from '@/lib/viewmodels/riveController'
-import { Upload, Trash2 } from 'lucide-react'
+import { Upload } from 'lucide-react'
 
 function useRiveUpload() {
   const resetRive = useEditorStore((s) => s.resetRive)
@@ -61,43 +61,13 @@ function UploadZone({ onFile }: { onFile: (f: File) => void }) {
 }
 
 export function MainCanvas() {
-  const { lookAt, rive, setViewModelName, setRiveField, clearRive } = useEditorStore()
+  const { lookAt, rive, setViewModelName, setRiveField } = useEditorStore()
   const faceEmotion = useTelemetry((s) => s.face.emotion)
   const handleFile = useRiveUpload()
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const hasFile = !!rive.src
 
   return (
     <div className="flex flex-col h-full">
-      {/* Canvas header */}
-      <div className="flex items-center justify-between gap-3 border-b px-4 py-2">
-        <span className="text-sm font-medium">Rive Animation</span>
-        {hasFile && (
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="size-3" />
-              Replace
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 gap-1.5 text-xs text-destructive hover:text-destructive"
-              onClick={() => { riveControllerRef.current = null; clearRive() }}
-            >
-              <Trash2 className="size-3" />
-              Remove
-            </Button>
-          </div>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".riv"
-          className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
-        />
-      </div>
-
       {/* View model + state machine selectors — only when a file is loaded */}
       {hasFile && (
         <div className="flex items-center gap-4 border-b px-4 py-2">

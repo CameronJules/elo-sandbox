@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Zap, Minus, X, Trash2 } from 'lucide-react'
+import { Plus, Zap, Minus, X, Trash2, Play, Square, Bot, Eye, Camera } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -15,7 +16,13 @@ import type { RiveVariable, ToolDef } from '@/lib/viewmodels/useEditorStore'
 import { riveControllerRef } from '@/lib/viewmodels/riveController'
 import type { ToolAction } from '@/lib/viewmodels/riveController'
 import { logger } from '@/lib/observability/logger'
-import { Bot, Eye, Camera } from 'lucide-react'
+import { OpenAIRealtimeProvider } from '@/lib/modules/llm/openaiRealtimeProvider'
+import { MockLLMProvider } from '@/lib/modules/llm/mockProvider'
+import { microphoneService } from '@/lib/services/microphoneService'
+import type { RealtimeLLMProvider } from '@/lib/modules/llm/llm.interface'
+
+const providerRef = { current: null as RealtimeLLMProvider | null }
+const audioRef = { current: null as HTMLAudioElement | null }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -47,7 +54,7 @@ function NumberInput({ variable, update }: { variable: RiveVariable; update: (v:
       type="number"
       step="1"
       value={raw}
-      className="h-7 w-28 text-xs"
+      className="h-8 w-full !text-xs border border-border/40 bg-muted"
       onChange={(e) => setRaw(e.target.value)}
       onBlur={(e) => commit(e.target.value)}
       onKeyDown={(e) => { if (e.key === 'Enter') commit((e.target as HTMLInputElement).value) }}
@@ -75,7 +82,7 @@ function VariableControl({ variable }: { variable: RiveVariable }) {
       <Button
         variant="outline"
         size="sm"
-        className="h-7 gap-1.5 text-xs"
+        className="h-8 w-full gap-1.5 text-xs border border-border/40 bg-muted"
         onClick={() => {
           logger.log('rive', `trigger fired: ${variable.name}`)
           riveControllerRef.current?.executeAction({ kind: 'trigger', prop: variable.name, value: '' })
@@ -100,7 +107,7 @@ function VariableControl({ variable }: { variable: RiveVariable }) {
     const options = variable.enumValues ?? []
     return (
       <Select value={String(variable.value ?? '')} onValueChange={(v) => update(v)}>
-        <SelectTrigger className="h-7 w-36 text-xs">
+        <SelectTrigger className="h-8 w-full text-xs border border-border/40 bg-muted">
           <SelectValue placeholder="Select…" />
         </SelectTrigger>
         <SelectContent>
@@ -126,7 +133,7 @@ function VariableControl({ variable }: { variable: RiveVariable }) {
     return (
       <Input
         value={String(variable.value ?? '')}
-        className="h-7 w-28 text-xs"
+        className="h-8 w-full text-xs border border-border/40 bg-muted"
         onChange={(e) => update(e.target.value)}
       />
     )
@@ -142,7 +149,7 @@ function VariableControl({ variable }: { variable: RiveVariable }) {
       <input
         type="color"
         value={hex}
-        className="h-7 w-14 cursor-pointer rounded border border-input bg-background p-0.5"
+        className="h-8 w-full cursor-pointer rounded border border-border/40 bg-muted p-0.5"
         onChange={(e) => {
           const c = e.target.value
           const rr = parseInt(c.slice(1, 3), 16)
@@ -164,9 +171,12 @@ function RiveProperties() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium">Variables</p>
-        <span className="text-xs text-muted-foreground">{variables.length} data values</span>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium">Variables</p>
+          <span className="text-xs text-muted-foreground">{variables.length} data values</span>
+        </div>
+        <Separator />
       </div>
 
       {variables.length === 0 ? (
@@ -176,16 +186,14 @@ function RiveProperties() {
             : 'Select a view model to see its variables.'}
         </p>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {variables.map((v) => (
-            <div key={v.name} className="flex items-center justify-between gap-3">
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-xs font-medium truncate">{v.name}</span>
-                <span className="text-[10px] text-muted-foreground">{v.type}</span>
-              </div>
-              <div className="shrink-0">
-                <VariableControl variable={v} />
-              </div>
+            <div key={v.name} className="flex flex-col gap-1.5">
+              <span className="text-xs truncate">
+                <span className="text-gray-800">{v.name}</span>
+                <span className="text-gray-400 ml-1.5">{v.type}</span>
+              </span>
+              <VariableControl variable={v} />
             </div>
           ))}
         </div>
@@ -201,7 +209,7 @@ function FaceTrackerProperties() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <Label className="text-sm">Show Overlay</Label>
+        <Label className="text-xs">Show Overlay</Label>
         <Switch
           checked={faceTracker.overlay}
           onCheckedChange={(v) => setFaceTrackerField('overlay', v)}
@@ -408,8 +416,90 @@ function ToolEditorContent({
 }
 
 function LLMProperties() {
-  const { session, setSessionField, addTool, deleteTool } = useEditorStore()
+  const { session, setSessionField, setSessionStatus, addTool, deleteTool } = useEditorStore()
   const [openToolId, setOpenToolId] = useState<string | null>(null)
+
+  const isActive = session.status === 'connected'
+  const isConnecting = session.status === 'connecting'
+  const canStart = session.status === 'idle'
+  const canStop = session.status !== 'idle'
+
+  async function startSession() {
+    setSessionStatus('connecting')
+    logger.log('system', 'Session starting')
+    try {
+      const provider = session.provider === 'mock' ? new MockLLMProvider() : new OpenAIRealtimeProvider()
+      providerRef.current = provider
+
+      provider.onStateChange((s) => {
+        setSessionStatus(s)
+        logger.log('llm', `State → ${s}`)
+      })
+      provider.onAudio((stream) => {
+        if (!audioRef.current) audioRef.current = new Audio()
+        audioRef.current.srcObject = stream
+        audioRef.current.play()
+        logger.log('llm', 'Audio response received')
+      })
+      provider.onToolCall((call) => {
+        const { session, rive } = useEditorStore.getState()
+        const tool = session.tools.find((t) => t.name === call.name)
+
+        if (tool?.actionType === 'animationControl' && tool.variableName != null) {
+          const variable = rive.variables.find((v) => v.name === tool.variableName)
+          if (variable) {
+            const KIND_MAP: Record<string, 'number' | 'enum' | 'boolean' | 'trigger' | 'string' | 'color'> = {
+              number: 'number', integer: 'number', boolean: 'boolean',
+              enumType: 'enum', string: 'string', color: 'color',
+            }
+            const kind = KIND_MAP[variable.type]
+            if (kind) {
+              riveControllerRef.current?.executeAction({ kind, prop: tool.variableName, value: tool.actionValue ?? '' })
+            }
+          }
+        }
+
+        if (call.name === 'setEmotion') {
+          useEditorStore.getState().setEmotion((call.args as { emotion: string }).emotion)
+        }
+        provider.respondToolCall(call.id, { success: true })
+        logger.log('llm', `Tool call: ${call.name}`)
+      })
+      provider.onTranscript((delta, role) => {
+        if (role === 'user') logger.log('llm', 'User audio detected')
+      })
+
+      if (session.provider !== 'mock') {
+        const micStream = await microphoneService.start()
+        const track = micStream.getAudioTracks()[0]
+        provider.sendMicTrack(track)
+      }
+
+      await provider.connect({
+        voice: session.voice,
+        systemPrompt: session.systemPrompt,
+        tools: session.tools.map(({ name, description, parameters }) => ({ name, description, parameters })),
+        model: 'gpt-4o-realtime-preview-2024-12-17',
+        interruptions: session.interruptions,
+        vadThreshold: session.vadThreshold,
+      })
+    } catch (err) {
+      logger.error('system', 'Session failed', err)
+      setSessionStatus('error')
+    }
+  }
+
+  function stopSession() {
+    providerRef.current?.disconnect()
+    providerRef.current = null
+    microphoneService.stop()
+    if (audioRef.current) {
+      audioRef.current.srcObject = null
+      audioRef.current = null
+    }
+    setSessionStatus('idle')
+    logger.log('system', 'Session stopped')
+  }
 
   function handleAddTool() {
     const id = `tool_${Date.now()}`
@@ -439,18 +529,52 @@ function LLMProperties() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Session controls */}
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            className="flex-1 gap-1.5"
+            disabled={!canStart}
+            onClick={startSession}
+          >
+            <Play className="size-3.5" />
+            {isConnecting ? 'Connecting…' : 'Start Session'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canStop}
+            onClick={stopSession}
+          >
+            <Square className="size-3.5" />
+          </Button>
+        </div>
+        {isActive && (
+          <Badge variant="secondary" className="self-start gap-1.5 bg-green-500 text-white hover:bg-green-500/80">
+            <span className="size-1.5 rounded-full bg-white" />
+            Session Active
+          </Badge>
+        )}
+        {session.status === 'error' && (
+          <Badge variant="destructive" className="self-start">Error</Badge>
+        )}
+      </div>
+
+      <Separator />
+
       <Row label="Provider">
         <Select
           value={session.provider}
           onValueChange={(v) => setSessionField('provider', v as 'openai' | 'mock')}
         >
-          <SelectTrigger>
+          <SelectTrigger className="text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value="openai">OpenAI Realtime</SelectItem>
-              <SelectItem value="mock">Mock (offline)</SelectItem>
+              <SelectItem value="openai" className="text-xs">OpenAI Realtime</SelectItem>
+              <SelectItem value="mock" className="text-xs">Mock (offline)</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>
@@ -458,13 +582,13 @@ function LLMProperties() {
 
       <Row label="Voice">
         <Select value={session.voice} onValueChange={(v) => setSessionField('voice', v)}>
-          <SelectTrigger>
+          <SelectTrigger className="text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
               {['alloy', 'echo', 'shimmer', 'verse', 'ash', 'ballad', 'coral', 'sage'].map((v) => (
-                <SelectItem key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</SelectItem>
+                <SelectItem key={v} value={v} className="text-xs">{v.charAt(0).toUpperCase() + v.slice(1)}</SelectItem>
               ))}
             </SelectGroup>
           </SelectContent>
@@ -476,7 +600,7 @@ function LLMProperties() {
           value={session.systemPrompt}
           onChange={(e) => setSessionField('systemPrompt', e.target.value)}
           rows={5}
-          className="text-xs"
+          className="text-xs font-light"
         />
       </Row>
 
@@ -536,18 +660,17 @@ function LLMProperties() {
         ))}
       </div>
 
-      <Separator />
       <p className="text-xs font-medium">Session Settings</p>
 
       <div className="flex items-center justify-between">
-        <Label className="text-sm">Auto Start</Label>
+        <Label className="text-xs font-normal">Auto Start</Label>
         <Switch
           checked={session.autoStart}
           onCheckedChange={(v) => setSessionField('autoStart', v)}
         />
       </div>
       <div className="flex items-center justify-between">
-        <Label className="text-sm">Interruptions</Label>
+        <Label className="text-xs font-normal">Interruptions</Label>
         <Switch
           checked={session.interruptions}
           onCheckedChange={(v) => setSessionField('interruptions', v)}
