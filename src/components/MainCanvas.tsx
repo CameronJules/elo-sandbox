@@ -111,7 +111,7 @@ export function MainCanvas() {
 
       {/* Main view */}
       <div className="relative flex-1 min-h-0">
-        {hasFile ? <RiveViewer /> : <UploadZone onFile={handleFile} />}
+        {hasFile ? <RiveViewer key={rive.src} /> : <UploadZone onFile={handleFile} />}
         <div className="absolute bottom-4 left-4 w-56">
           <p className="mb-1 text-xs text-muted-foreground">Webcam (Face Tracker)</p>
           <WebcamWithOverlay />
