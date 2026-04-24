@@ -79,7 +79,12 @@ export class RiveController {
 
   // Direct VMI dispatch — used by AI tools referencing VM property names explicitly
   executeAction(action: ToolAction): void {
-    logger.log('rive', `executeAction: ${action.kind} "${action.prop}" = ${JSON.stringify(action.value)}`)
+    logger.log(
+      'rive',
+      `executeAction: ${action.kind} "${action.prop}" = ${JSON.stringify(action.value)}`,
+      undefined,
+      { groupKey: `executeAction:${action.kind}:${action.prop}`, groupWindowMs: 3000 },
+    )
     try {
       switch (action.kind) {
         case 'number': { const p = this.vmi.number(action.prop); if (p) p.value = Number(action.value); break }

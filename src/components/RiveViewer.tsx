@@ -24,20 +24,34 @@ export function RiveViewer() {
 
   // onLoad closure always captures rive=null, so we enumerate here instead
   useEffect(() => {
-    if (!rive) return
-
-    const machines: string[] = rive.stateMachineNames ?? []
-    setAvailableStateMachines(machines)
-    logger.log('rive', `State machines: ${machines.join(', ') || 'none'}`)
-
-    const vmNames: string[] = []
-    for (let i = 0; i < rive.viewModelCount; i++) {
-      const vm = rive.viewModelByIndex(i)
-      if (vm) vmNames.push(vm.name)
+    if (!rive) {
+      riveControllerRef.current = null
+      setAvailableStateMachines([])
+      setAvailableViewModels([])
+      setVariables([])
+      return
     }
-    setAvailableViewModels(vmNames)
-    logger.log('rive', `View models: [${vmNames.join(', ') || 'none'}]`)
-  }, [rive])
+
+    try {
+      const machines: string[] = rive.stateMachineNames ?? []
+      setAvailableStateMachines(machines)
+      logger.log('rive', `State machines: ${machines.join(', ') || 'none'}`)
+
+      const vmNames: string[] = []
+      const viewModelCount = typeof rive.viewModelCount === 'number' ? rive.viewModelCount : 0
+      for (let i = 0; i < viewModelCount; i++) {
+        const vm = rive.viewModelByIndex(i)
+        if (vm) vmNames.push(vm.name)
+      }
+      setAvailableViewModels(vmNames)
+      logger.log('rive', `View models: [${vmNames.join(', ') || 'none'}]`)
+    } catch (err) {
+      riveControllerRef.current = null
+      setAvailableViewModels([])
+      setVariables([])
+      logger.warn('rive', 'Failed to enumerate Rive view models', err)
+    }
+  }, [rive, setAvailableStateMachines, setAvailableViewModels, setVariables])
 
   // Start/switch the selected state machine so the animation loop runs
   useEffect(() => {
@@ -50,46 +64,53 @@ export function RiveViewer() {
   // Bind the selected VMI and create the RiveController
   useEffect(() => {
     if (!rive || !viewModelName) return
-    const vm = rive.viewModelByName(viewModelName)
-    if (!vm) return
-    const instance = vm.defaultInstance() ?? vm.instance()
-    if (!instance) return
 
-    rive.bindViewModelInstance(instance)
-    riveControllerRef.current = new RiveController(instance)
-    logger.log('rive', `Bound view model "${viewModelName}"`)
+    try {
+      const vm = rive.viewModelByName(viewModelName)
+      if (!vm) return
+      const instance = vm.defaultInstance() ?? vm.instance()
+      if (!instance) return
 
-    const vars: RiveVariable[] = instance.properties
-      .filter((p) => !EXCLUDED_TYPES.has(p.type))
-      .map((p) => {
-        const type = p.type as RiveVariableType
-        let value: number | boolean | string | null = null
-        let enumValues: string[] | undefined
-        try {
-          if (type === 'number' || type === 'integer') {
-            value = instance.number(p.name)?.value ?? 0
-          } else if (type === 'boolean') {
-            value = instance.boolean(p.name)?.value ?? false
-          } else if (type === 'string') {
-            value = instance.string(p.name)?.value ?? ''
-          } else if (type === 'color') {
-            value = instance.color(p.name)?.value ?? 0
-          } else if (type === 'enumType') {
-            const e = instance.enum(p.name)
-            value = e?.value ?? ''
-            enumValues = e?.values ?? []
+      rive.bindViewModelInstance(instance)
+      riveControllerRef.current = new RiveController(instance)
+      logger.log('rive', `Bound view model "${viewModelName}"`)
+
+      const vars: RiveVariable[] = instance.properties
+        .filter((p) => !EXCLUDED_TYPES.has(p.type))
+        .map((p) => {
+          const type = p.type as RiveVariableType
+          let value: number | boolean | string | null = null
+          let enumValues: string[] | undefined
+          try {
+            if (type === 'number' || type === 'integer') {
+              value = instance.number(p.name)?.value ?? 0
+            } else if (type === 'boolean') {
+              value = instance.boolean(p.name)?.value ?? false
+            } else if (type === 'string') {
+              value = instance.string(p.name)?.value ?? ''
+            } else if (type === 'color') {
+              value = instance.color(p.name)?.value ?? 0
+            } else if (type === 'enumType') {
+              const e = instance.enum(p.name)
+              value = e?.value ?? ''
+              enumValues = e?.values ?? []
+            }
+          } catch (err) {
+            logger.warn('rive', `Could not read property "${p.name}" (${type})`, err)
           }
-        } catch (err) {
-          logger.warn('rive', `Could not read property "${p.name}" (${type})`, err)
-        }
-        return { name: p.name, type, value, enumValues }
-      })
+          return { name: p.name, type, value, enumValues }
+        })
 
-    setVariables(vars)
-    logger.log('rive', `Variables: ${vars.map((v) => v.name).join(', ')}`)
+      setVariables(vars)
+      logger.log('rive', `Variables: ${vars.map((v) => v.name).join(', ')}`)
+    } catch (err) {
+      riveControllerRef.current = null
+      setVariables([])
+      logger.warn('rive', `Failed to bind view model "${viewModelName}"`, err)
+    }
 
     return () => { riveControllerRef.current = null }
-  }, [rive, viewModelName])
+  }, [rive, viewModelName, setVariables])
 
   // Pan / zoom state
   const [pan, setPan] = useState({ x: 0, y: 0 })
