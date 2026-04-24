@@ -80,23 +80,23 @@ export function LayerPanel() {
               <ChevronDown className="size-3.5 shrink-0 ml-2 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuItem onClick={() => { configSerializer.save(); logger.log('system', 'Config saved') }}>
+          <DropdownMenuContent align="end" className="w-52 bg-zinc-900 border-zinc-700/60 text-zinc-100 p-1.5">
+            <DropdownMenuItem onClick={() => { configSerializer.save(); logger.log('system', 'Config saved') }} className="text-xs font-light focus:bg-zinc-800 focus:text-zinc-100 px-3 py-1.5">
               Save config
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => configSerializer.exportJSON()}>
+            <DropdownMenuItem onClick={() => configSerializer.exportJSON()} className="text-xs font-light focus:bg-zinc-800 focus:text-zinc-100 px-3 py-1.5">
               Export JSON
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => configInputRef.current?.click()}>
+            <DropdownMenuItem onClick={() => configInputRef.current?.click()} className="text-xs font-light focus:bg-zinc-800 focus:text-zinc-100 px-3 py-1.5">
               Load config
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => riveInputRef.current?.click()}>
+            <DropdownMenuSeparator className="bg-zinc-700/60" />
+            <DropdownMenuItem onClick={() => riveInputRef.current?.click()} className="text-xs font-light focus:bg-zinc-800 focus:text-zinc-100 px-3 py-1.5">
               Replace Rive file
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => { riveControllerRef.current = null; clearRive() }}
-              className="text-destructive focus:text-destructive"
+              className="text-xs font-light text-red-400 focus:bg-zinc-800 focus:text-red-400 px-3 py-1.5"
             >
               Remove Rive file
             </DropdownMenuItem>

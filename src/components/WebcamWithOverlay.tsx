@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -7,7 +7,6 @@ import { faceTrackingModule } from '@/lib/modules/faceTracking/mediaPipeFaceTrac
 import { useEditorStore } from '@/lib/viewmodels/useEditorStore'
 import { useTelemetry } from '@/lib/observability/telemetryStore'
 import { logger } from '@/lib/observability/logger'
-import type { FaceFrame } from '@/lib/modules/faceTracking/faceTracking.interface'
 
 export function WebcamWithOverlay() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -15,37 +14,6 @@ export function WebcamWithOverlay() {
   const [fps, setFps] = useState(0)
   const { faceTracker, setFaceTrackerField } = useEditorStore()
   const prevRef = useRef({ x: 0.5, y: 0.5 })
-
-  const drawOverlay = useCallback((frame: FaceFrame) => {
-    const canvas = canvasRef.current
-    const video = videoRef.current
-    if (!canvas || !video) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-    if (!faceTracker.overlay) return
-
-    for (const face of frame.landmarks) {
-      ctx.fillStyle = 'rgba(255,255,255,0.4)'
-      for (const lm of face) {
-        ctx.beginPath()
-        ctx.arc(lm.x * canvas.width, lm.y * canvas.height, 1.5, 0, Math.PI * 2)
-        ctx.fill()
-      }
-      // Nose tip highlight
-      const nose = frame.nose
-      ctx.fillStyle = '#22c55e'
-      ctx.beginPath()
-      ctx.arc(nose.x * canvas.width, nose.y * canvas.height, 5, 0, Math.PI * 2)
-      ctx.fill()
-    }
-
-    setFps(frame.fps)
-  }, [faceTracker.overlay])
 
   useEffect(() => {
     let started = false
@@ -66,8 +34,32 @@ export function WebcamWithOverlay() {
     }
     start()
     const unsub = faceTrackingModule.subscribe((frame) => {
-      drawOverlay(frame)
-      // Smooth + apply sensitivity
+      const canvas = canvasRef.current
+      const video = videoRef.current
+      if (canvas && video) {
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
+          ctx.clearRect(0, 0, canvas.width, canvas.height)
+          if (useEditorStore.getState().faceTracker.overlay) {
+            for (const face of frame.landmarks) {
+              ctx.fillStyle = 'rgba(255,255,255,0.4)'
+              for (const lm of face) {
+                ctx.beginPath()
+                ctx.arc(lm.x * canvas.width, lm.y * canvas.height, 1.5, 0, Math.PI * 2)
+                ctx.fill()
+              }
+              const nose = frame.nose
+              ctx.fillStyle = '#22c55e'
+              ctx.beginPath()
+              ctx.arc(nose.x * canvas.width, nose.y * canvas.height, 5, 0, Math.PI * 2)
+              ctx.fill()
+            }
+          }
+        }
+      }
+      setFps(frame.fps)
       const smooth = useEditorStore.getState().faceTracker.smoothing
       const sens = useEditorStore.getState().faceTracker.sensitivity
       const prev = prevRef.current
