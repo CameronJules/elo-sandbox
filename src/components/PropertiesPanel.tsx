@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Zap, Minus, X, Trash2, Play, Square, Bot, Eye, Camera } from 'lucide-react'
+import { Plus, Zap, Minus, X, Trash2, Play, Square, Bot, Eye, Camera, SlidersHorizontal } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,7 @@ import { OpenAIRealtimeProvider } from '@/lib/modules/llm/openaiRealtimeProvider
 import { MockLLMProvider } from '@/lib/modules/llm/mockProvider'
 import { microphoneService } from '@/lib/services/microphoneService'
 import type { RealtimeLLMProvider } from '@/lib/modules/llm/llm.interface'
+import { getChopFeeds } from '@/lib/modules/chop/chopFeedRegistry'
 
 const providerRef = { current: null as RealtimeLLMProvider | null }
 const audioRef = { current: null as HTMLAudioElement | null }
@@ -690,6 +691,98 @@ function LLMProperties() {
   )
 }
 
+function ChopProperties() {
+  const { chop, rive, setChopField } = useEditorStore()
+  const feeds = getChopFeeds()
+  const numericVariables = rive.variables.filter((variable) => variable.type === 'number' || variable.type === 'integer')
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Enable CHOP</Label>
+        <Switch
+          checked={chop.enabled}
+          onCheckedChange={(value) => setChopField('enabled', value)}
+        />
+      </div>
+
+      <Separator />
+
+      <Row label="Data Feed">
+        <Select value={chop.selectedFeedId} onValueChange={(value) => setChopField('selectedFeedId', value)}>
+          <SelectTrigger className="text-xs">
+            <SelectValue placeholder="Select feed…" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {feeds.map((feed) => (
+                <SelectItem key={feed.id} value={feed.id} className="text-xs">
+                  {feed.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </Row>
+
+      <Row label="Transform Code">
+        <Textarea
+          value={chop.transformCode}
+          onChange={(e) => setChopField('transformCode', e.target.value)}
+          rows={5}
+          spellCheck={false}
+          className="min-h-[132px] resize-y border-zinc-800 bg-zinc-950 font-mono text-xs text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-zinc-500"
+          placeholder="return value * 100"
+        />
+      </Row>
+
+      <Row label="Output Variable">
+        {numericVariables.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">Load a Rive file with numeric variables first</p>
+        ) : (
+          <Select value={chop.targetVariableName} onValueChange={(value) => setChopField('targetVariableName', value)}>
+            <SelectTrigger className="text-xs">
+              <SelectValue placeholder="Select numeric variable…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {numericVariables.map((variable) => (
+                  <SelectItem key={variable.name} value={variable.name} className="text-xs">
+                    {variable.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        )}
+      </Row>
+
+      <Separator />
+
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Current Input</span>
+          <Badge variant="secondary" className="font-mono text-[10px]">
+            {chop.lastInput == null ? '—' : chop.lastInput.toFixed(3)}
+          </Badge>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Current Output</span>
+          <Badge variant="secondary" className="font-mono text-[10px]">
+            {chop.lastOutput == null ? '—' : chop.lastOutput.toFixed(3)}
+          </Badge>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted-foreground">Status</span>
+          <div className="rounded-md border border-border/40 bg-muted px-3 py-2 text-xs">
+            {chop.error || 'Ready'}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function PropertiesPanel() {
   const { selectedLayer, rive } = useEditorStore()
 
@@ -697,6 +790,7 @@ export function PropertiesPanel() {
     rive: { label: 'Rive Animation', sub: rive.fileName || 'No file loaded', Icon: Eye },
     llm: { label: 'LLM', sub: 'GPT Realtime', Icon: Bot },
     face: { label: 'Face Tracker Webcam', sub: 'MediaPipe', Icon: Camera },
+    chop: { label: 'CHOP', sub: 'Channel Operator', Icon: SlidersHorizontal },
   }
 
   const meta = LAYER_META[selectedLayer]
@@ -720,6 +814,7 @@ export function PropertiesPanel() {
           {selectedLayer === 'rive' && <RiveProperties />}
           {selectedLayer === 'llm' && <LLMProperties />}
           {selectedLayer === 'face' && <FaceTrackerProperties />}
+          {selectedLayer === 'chop' && <ChopProperties />}
         </ScrollAreaContent>
       </CardContent>
     </Card>

@@ -21,6 +21,12 @@ export interface EditorConfig {
     smoothing: number
     sensitivity: number
   }
+  chop?: {
+    enabled: boolean
+    selectedFeedId: string
+    transformCode: string
+    targetVariableName: string
+  }
 }
 
 const STORAGE_KEY = 'elo-editor-config'
@@ -41,6 +47,12 @@ function buildConfig() {
       overlay: s.faceTracker.overlay,
       smoothing: s.faceTracker.smoothing,
       sensitivity: s.faceTracker.sensitivity,
+    },
+    chop: {
+      enabled: s.chop.enabled,
+      selectedFeedId: s.chop.selectedFeedId,
+      transformCode: s.chop.transformCode,
+      targetVariableName: s.chop.targetVariableName,
     },
   } satisfies EditorConfig
 }
@@ -80,6 +92,10 @@ function applyConfig(cfg: EditorConfig) {
   s.setFaceTrackerField('overlay', cfg.faceTracker.overlay)
   s.setFaceTrackerField('smoothing', cfg.faceTracker.smoothing)
   s.setFaceTrackerField('sensitivity', cfg.faceTracker.sensitivity)
+  s.setChopField('enabled', cfg.chop?.enabled ?? false)
+  s.setChopField('selectedFeedId', cfg.chop?.selectedFeedId ?? 'face.position.x')
+  s.setChopField('transformCode', cfg.chop?.transformCode ?? 'return value')
+  s.setChopField('targetVariableName', cfg.chop?.targetVariableName ?? '')
 }
 
 export const configSerializer = {

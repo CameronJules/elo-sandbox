@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type LayerKey = 'rive' | 'llm' | 'face'
+export type LayerKey = 'rive' | 'llm' | 'face' | 'chop'
 export type SessionStatus = 'idle' | 'connecting' | 'connected' | 'error'
 
 export interface ToolDef {
@@ -56,6 +56,16 @@ interface EditorState {
     active: boolean
   }
 
+  chop: {
+    enabled: boolean
+    selectedFeedId: string
+    transformCode: string
+    targetVariableName: string
+    lastInput: number | null
+    lastOutput: number | null
+    error: string
+  }
+
   setSelectedLayer(layer: LayerKey): void
   setEmotion(emotion: string): void
   setLookAt(x: number, y: number): void
@@ -74,6 +84,7 @@ interface EditorState {
   setVariableValue(name: string, value: number | boolean | string | null): void
 
   setFaceTrackerField<K extends keyof EditorState['faceTracker']>(key: K, value: EditorState['faceTracker'][K]): void
+  setChopField<K extends keyof EditorState['chop']>(key: K, value: EditorState['chop'][K]): void
 
   addTool(tool: ToolDef): void
   updateTool(id: string, patch: Partial<ToolDef>): void
@@ -116,6 +127,16 @@ export const useEditorStore = create<EditorState>((set) => ({
     active: false,
   },
 
+  chop: {
+    enabled: false,
+    selectedFeedId: 'face.position.x',
+    transformCode: 'return value',
+    targetVariableName: '',
+    lastInput: null,
+    lastOutput: null,
+    error: '',
+  },
+
   setSelectedLayer: (layer) => set({ selectedLayer: layer }),
   setEmotion: (emotion) => set({ emotion }),
   setLookAt: (x, y) => set({ lookAt: { x, y } }),
@@ -150,14 +171,19 @@ export const useEditorStore = create<EditorState>((set) => ({
   setViewModelName: (name) => set((s) => ({ rive: { ...s.rive, viewModelName: name } })),
   setVariables: (vars) => set((s) => ({ rive: { ...s.rive, variables: vars } })),
   setVariableValue: (name, value) =>
-    set((s) => ({
-      rive: {
-        ...s.rive,
-        variables: s.rive.variables.map((v) => (v.name === name ? { ...v, value } : v)),
-      },
-    })),
+    set((s) => {
+      let changed = false
+      const variables = s.rive.variables.map((v) => {
+        if (v.name !== name || v.value === value) return v
+        changed = true
+        return { ...v, value }
+      })
+      return changed ? { rive: { ...s.rive, variables } } : s
+    }),
 
   setFaceTrackerField: (key, value) => set((s) => ({ faceTracker: { ...s.faceTracker, [key]: value } })),
+  setChopField: (key, value) =>
+    set((s) => (s.chop[key] === value ? s : { chop: { ...s.chop, [key]: value } })),
 
   addTool: (tool) => set((s) => ({ session: { ...s.session, tools: [...s.session.tools, tool] } })),
   updateTool: (id, patch) => set((s) => ({

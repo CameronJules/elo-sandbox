@@ -8,6 +8,7 @@ export interface LogEntry {
   source: LogSource
   message: string
   data?: unknown
+  repeatCount: number
 }
 
 export interface Logger {
@@ -26,7 +27,34 @@ class SimpleLogger implements Logger {
   private counter = 0
   private listeners = new Set<(entries: LogEntry[]) => void>()
 
+  private samePayload(a: unknown, b: unknown): boolean {
+    if (a === b) return true
+    try {
+      return JSON.stringify(a) === JSON.stringify(b)
+    } catch {
+      return false
+    }
+  }
+
   private add(level: LogLevel, source: LogSource, message: string, data?: unknown) {
+    const lastEntry = this.entries[this.entries.length - 1]
+    if (
+      lastEntry &&
+      lastEntry.level === level &&
+      lastEntry.source === source &&
+      lastEntry.message === message &&
+      this.samePayload(lastEntry.data, data)
+    ) {
+      const nextEntry: LogEntry = {
+        ...lastEntry,
+        ts: new Date().toLocaleTimeString('en-US', { hour12: false }),
+        repeatCount: lastEntry.repeatCount + 1,
+      }
+      this.entries = [...this.entries.slice(0, -1), nextEntry]
+      this.listeners.forEach((cb) => cb(this.entries))
+      return
+    }
+
     const entry: LogEntry = {
       id: ++this.counter,
       ts: new Date().toLocaleTimeString('en-US', { hour12: false }),
@@ -34,6 +62,7 @@ class SimpleLogger implements Logger {
       source,
       message,
       data,
+      repeatCount: 1,
     }
     this.entries = [...this.entries.slice(-(RING_SIZE - 1)), entry]
     this.listeners.forEach((cb) => cb(this.entries))

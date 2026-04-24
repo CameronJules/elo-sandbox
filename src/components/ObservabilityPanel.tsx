@@ -9,13 +9,19 @@ import { cn } from '@/lib/utils'
 
 function LogLine({ entry }: { entry: LogEntry }) {
   return (
-    <div className="flex gap-2 font-mono text-[11px] py-1.5 font-extralight">
+    <div className="flex items-center gap-2 font-mono text-[11px] py-1.5 font-extralight">
       <span className="text-grey-800 shrink-0">{entry.ts}</span>
       <span className={cn(
+        'min-w-0 flex-1',
         entry.level === 'error' ? 'text-destructive' : entry.level === 'warn' ? 'text-yellow-500' : 'text-gray-500',
       )}>
         {entry.message}
       </span>
+      {entry.repeatCount > 1 && (
+        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+          ×{entry.repeatCount}
+        </span>
+      )}
     </div>
   )
 }

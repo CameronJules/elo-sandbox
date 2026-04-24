@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { ChevronDown, Plus, Eye, Bot, Camera } from 'lucide-react'
+import { ChevronDown, Plus, Eye, Bot, Camera, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -20,6 +20,7 @@ const LAYERS: { key: LayerKey; label: string; Icon: React.ElementType }[] = [
   { key: 'rive', label: 'Rive animation', Icon: Eye },
   { key: 'llm', label: 'LLM provider', Icon: Bot },
   { key: 'face', label: 'Face tracker', Icon: Camera },
+  { key: 'chop', label: 'CHOP', Icon: SlidersHorizontal },
 ]
 
 export function LayerPanel() {

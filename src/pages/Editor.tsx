@@ -3,6 +3,7 @@ import { LayerPanel } from '@/components/LayerPanel'
 import { ObservabilityPanel } from '@/components/ObservabilityPanel'
 import { MainCanvas } from '@/components/MainCanvas'
 import { PropertiesPanel } from '@/components/PropertiesPanel'
+import { ChopRuntime } from '@/components/ChopRuntime'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -31,6 +32,12 @@ function persistedConfigFromState(state: ReturnType<typeof useEditorStore.getSta
       overlay: state.faceTracker.overlay,
       smoothing: state.faceTracker.smoothing,
       sensitivity: state.faceTracker.sensitivity,
+    },
+    chop: {
+      enabled: state.chop.enabled,
+      selectedFeedId: state.chop.selectedFeedId,
+      transformCode: state.chop.transformCode,
+      targetVariableName: state.chop.targetVariableName,
     },
   }
 }
@@ -63,6 +70,7 @@ export default function Editor() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
+      <ChopRuntime />
       <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
         {/* Left sidebar */}
         <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
