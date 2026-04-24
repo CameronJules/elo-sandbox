@@ -4,9 +4,13 @@ export type LayerKey = 'rive' | 'llm' | 'face'
 export type SessionStatus = 'idle' | 'connecting' | 'connected' | 'error'
 
 export interface ToolDef {
+  id: string
   name: string
   description: string
   parameters: Record<string, unknown>
+  actionType?: 'animationControl'
+  variableName?: string
+  actionValue?: string | number | boolean | null
 }
 
 export type RiveVariableType = 'number' | 'integer' | 'boolean' | 'string' | 'trigger' | 'color' | 'enumType'
@@ -70,6 +74,10 @@ interface EditorState {
   setVariableValue(name: string, value: number | boolean | string | null): void
 
   setFaceTrackerField<K extends keyof EditorState['faceTracker']>(key: K, value: EditorState['faceTracker'][K]): void
+
+  addTool(tool: ToolDef): void
+  updateTool(id: string, patch: Partial<ToolDef>): void
+  deleteTool(id: string): void
 }
 
 const DEFAULT_SYSTEM_PROMPT = `You are a friendly robot companion. You express emotions using your eyes. You can change your emotion using the setEmotion tool.`
@@ -85,19 +93,7 @@ export const useEditorStore = create<EditorState>((set) => ({
     provider: 'mock',
     voice: 'alloy',
     systemPrompt: DEFAULT_SYSTEM_PROMPT,
-    tools: [
-      {
-        name: 'setEmotion',
-        description: 'Update the robot eye emotion state',
-        parameters: {
-          type: 'object',
-          properties: {
-            emotion: { type: 'string', enum: ['neutral', 'happy', 'sad', 'surprised', 'angry'] },
-          },
-          required: ['emotion'],
-        },
-      },
-    ],
+    tools: [],
     interruptions: true,
     vadThreshold: 0.7,
     autoStart: false,
@@ -162,4 +158,10 @@ export const useEditorStore = create<EditorState>((set) => ({
     })),
 
   setFaceTrackerField: (key, value) => set((s) => ({ faceTracker: { ...s.faceTracker, [key]: value } })),
+
+  addTool: (tool) => set((s) => ({ session: { ...s.session, tools: [...s.session.tools, tool] } })),
+  updateTool: (id, patch) => set((s) => ({
+    session: { ...s.session, tools: s.session.tools.map((t) => t.id === id ? { ...t, ...patch } : t) },
+  })),
+  deleteTool: (id) => set((s) => ({ session: { ...s.session, tools: s.session.tools.filter((t) => t.id !== id) } })),
 }))

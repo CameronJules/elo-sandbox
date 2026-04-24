@@ -110,10 +110,16 @@ export class OpenAIRealtimeProvider implements RealtimeLLMProvider {
       this.transcriptHandlers.forEach((h) => h(event.delta as string, 'assistant'))
     } else if (type === 'conversation.item.input_audio_transcription.completed') {
       this.transcriptHandlers.forEach((h) => h(event.transcript as string, 'user'))
+    } else if (type === 'response.output_item.added') {
+      const item = event.item as Record<string, unknown>
+      if (item?.type === 'function_call') {
+        const id = item.call_id as string
+        this.pendingToolCalls.set(id, { name: item.name as string, argsBuffer: '' })
+      }
     } else if (type === 'response.function_call_arguments.delta') {
       const id = event.call_id as string
       if (!this.pendingToolCalls.has(id)) {
-        this.pendingToolCalls.set(id, { name: event.name as string, argsBuffer: '' })
+        this.pendingToolCalls.set(id, { name: '', argsBuffer: '' })
       }
       this.pendingToolCalls.get(id)!.argsBuffer += event.delta as string
     } else if (type === 'response.function_call_arguments.done') {
