@@ -789,7 +789,7 @@ function ChopProperties({ chopId }: { chopId: string }) {
 }
 
 export function PropertiesPanel() {
-  const { selectedLayer, rive, chops } = useEditorStore()
+  const { selectedLayer, rive, chops, updateChop, deleteChop } = useEditorStore()
   const selectedChopId = selectedLayer.startsWith('chop:') ? selectedLayer.slice(5) : null
   const selectedChop = selectedChopId ? chops.find((entry) => entry.id === selectedChopId) : null
 
@@ -807,14 +807,35 @@ export function PropertiesPanel() {
   return (
     <Card className="flex flex-col h-full rounded-none border-0 border-l">
       <CardHeader className="py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex size-8 items-center justify-center rounded-md border">
-            <Icon className="size-4" />
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex size-8 items-center justify-center rounded-md border">
+              <Icon className="size-4" />
+            </div>
+            <div className="min-w-0">
+              {selectedChop ? (
+                <Input
+                  value={selectedChop.name}
+                  onChange={(e) => updateChop(selectedChop.id, { name: e.target.value })}
+                  className="h-7 border-border/40 bg-transparent px-0 text-sm font-semibold shadow-none focus-visible:ring-0"
+                />
+              ) : (
+                <CardTitle className="text-sm">{meta.label}</CardTitle>
+              )}
+              <p className="text-xs text-muted-foreground">{meta.sub}</p>
+            </div>
           </div>
-          <div>
-            <CardTitle className="text-sm">{meta.label}</CardTitle>
-            <p className="text-xs text-muted-foreground">{meta.sub}</p>
-          </div>
+          {selectedChop && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-destructive"
+              onClick={() => deleteChop(selectedChop.id)}
+            >
+              <Trash2 className="size-3.5" />
+              Delete
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="flex-1 overflow-auto">
