@@ -1,5 +1,5 @@
 import { loadEditorConfig, saveEditorConfig } from '@/lib/services/riveFileStorage'
-import { useEditorStore, type ToolDef } from '@/lib/viewmodels/useEditorStore'
+import { useEditorStore, type ChopDef, type ToolDef } from '@/lib/viewmodels/useEditorStore'
 
 export interface EditorConfig {
   rive: {
@@ -21,12 +21,7 @@ export interface EditorConfig {
     smoothing: number
     sensitivity: number
   }
-  chop?: {
-    enabled: boolean
-    selectedFeedId: string
-    transformCode: string
-    targetVariableName: string
-  }
+  chops?: Array<Pick<ChopDef, 'id' | 'name' | 'enabled' | 'selectedFeedId' | 'transformCode' | 'targetVariableName'>>
 }
 
 const STORAGE_KEY = 'elo-editor-config'
@@ -48,12 +43,14 @@ function buildConfig() {
       smoothing: s.faceTracker.smoothing,
       sensitivity: s.faceTracker.sensitivity,
     },
-    chop: {
-      enabled: s.chop.enabled,
-      selectedFeedId: s.chop.selectedFeedId,
-      transformCode: s.chop.transformCode,
-      targetVariableName: s.chop.targetVariableName,
-    },
+    chops: s.chops.map(({ id, name, enabled, selectedFeedId, transformCode, targetVariableName }) => ({
+      id,
+      name,
+      enabled,
+      selectedFeedId,
+      transformCode,
+      targetVariableName,
+    })),
   } satisfies EditorConfig
 }
 
@@ -92,10 +89,18 @@ function applyConfig(cfg: EditorConfig) {
   s.setFaceTrackerField('overlay', cfg.faceTracker.overlay)
   s.setFaceTrackerField('smoothing', cfg.faceTracker.smoothing)
   s.setFaceTrackerField('sensitivity', cfg.faceTracker.sensitivity)
-  s.setChopField('enabled', cfg.chop?.enabled ?? false)
-  s.setChopField('selectedFeedId', cfg.chop?.selectedFeedId ?? 'face.position.x')
-  s.setChopField('transformCode', cfg.chop?.transformCode ?? 'return value')
-  s.setChopField('targetVariableName', cfg.chop?.targetVariableName ?? '')
+  const chops = (cfg.chops ?? []).map((chop, index) => ({
+    id: chop.id || `chop-${Date.now()}-${index}`,
+    name: chop.name || `CHOP ${index + 1}`,
+    enabled: chop.enabled ?? false,
+    selectedFeedId: chop.selectedFeedId || 'face.position.x',
+    transformCode: chop.transformCode || 'return value',
+    targetVariableName: chop.targetVariableName || '',
+    lastInput: null,
+    lastOutput: null,
+    error: '',
+  }))
+  useEditorStore.setState({ chops })
 }
 
 export const configSerializer = {

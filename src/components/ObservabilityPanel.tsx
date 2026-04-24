@@ -39,13 +39,20 @@ export function ObservabilityPanel() {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const telemetry = useTelemetry()
   const { selectedLayer, session } = useEditorStore()
+  const selectedKind = selectedLayer.startsWith('chop:') ? 'chop' : selectedLayer
 
   useEffect(() => {
     setLogs(logger.getEntries())
     return logger.subscribe(setLogs)
   }, [])
 
-  const sourceLabel = selectedLayer === 'rive' ? 'Rive' : selectedLayer === 'llm' ? `LLM (${session.provider === 'mock' ? 'Mock' : 'GPT Realtime'})` : 'Face Tracker'
+  const sourceLabel = selectedKind === 'rive'
+    ? 'Rive'
+    : selectedKind === 'llm'
+      ? `LLM (${session.provider === 'mock' ? 'Mock' : 'GPT Realtime'})`
+      : selectedKind === 'face'
+        ? 'Face Tracker'
+        : 'CHOP'
 
   return (
     <Card className="flex flex-col h-full rounded-none border-0 border-t">
@@ -83,7 +90,7 @@ export function ObservabilityPanel() {
           </TabsContent>
 
           <TabsContent value="telemetry" className="flex-1 mt-2 min-h-0 px-4">
-            {selectedLayer === 'face' && (
+            {selectedKind === 'face' && (
               <>
                 <TelemetryRow label="Nose X" value={telemetry.face.nose.x.toFixed(3)} />
                 <TelemetryRow label="Nose Y" value={telemetry.face.nose.y.toFixed(3)} />
@@ -92,14 +99,14 @@ export function ObservabilityPanel() {
                 <TelemetryRow label="FPS" value={telemetry.face.fps} />
               </>
             )}
-            {selectedLayer === 'llm' && (
+            {selectedKind === 'llm' && (
               <>
                 <TelemetryRow label="Status" value={telemetry.llm.status} />
                 <TelemetryRow label="Last Tool Call" value={telemetry.llm.lastToolCall || '—'} />
                 <TelemetryRow label="Latency (ms)" value={telemetry.llm.responseLatencyMs} />
               </>
             )}
-            {selectedLayer === 'rive' && (
+            {selectedKind === 'rive' && (
               <>
                 <TelemetryRow label="State Machine" value={telemetry.rive.stateMachine || '—'} />
                 <TelemetryRow label="Last Trigger" value={telemetry.rive.lastTrigger || '—'} />

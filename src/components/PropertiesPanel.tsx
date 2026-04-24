@@ -691,10 +691,15 @@ function LLMProperties() {
   )
 }
 
-function ChopProperties() {
-  const { chop, rive, setChopField } = useEditorStore()
+function ChopProperties({ chopId }: { chopId: string }) {
+  const { chops, rive, updateChop } = useEditorStore()
+  const chop = chops.find((entry) => entry.id === chopId)
   const feeds = getChopFeeds()
   const numericVariables = rive.variables.filter((variable) => variable.type === 'number' || variable.type === 'integer')
+
+  if (!chop) {
+    return <p className="text-xs text-muted-foreground italic">CHOP not found.</p>
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -702,14 +707,14 @@ function ChopProperties() {
         <Label className="text-xs">Enable CHOP</Label>
         <Switch
           checked={chop.enabled}
-          onCheckedChange={(value) => setChopField('enabled', value)}
+          onCheckedChange={(value) => updateChop(chop.id, { enabled: value })}
         />
       </div>
 
       <Separator />
 
       <Row label="Data Feed">
-        <Select value={chop.selectedFeedId} onValueChange={(value) => setChopField('selectedFeedId', value)}>
+        <Select value={chop.selectedFeedId} onValueChange={(value) => updateChop(chop.id, { selectedFeedId: value })}>
           <SelectTrigger className="text-xs">
             <SelectValue placeholder="Select feed…" />
           </SelectTrigger>
@@ -728,7 +733,7 @@ function ChopProperties() {
       <Row label="Transform Code">
         <Textarea
           value={chop.transformCode}
-          onChange={(e) => setChopField('transformCode', e.target.value)}
+          onChange={(e) => updateChop(chop.id, { transformCode: e.target.value })}
           rows={5}
           spellCheck={false}
           className="min-h-[132px] resize-y border-zinc-800 bg-zinc-950 font-mono text-xs text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-zinc-500"
@@ -740,7 +745,7 @@ function ChopProperties() {
         {numericVariables.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">Load a Rive file with numeric variables first</p>
         ) : (
-          <Select value={chop.targetVariableName} onValueChange={(value) => setChopField('targetVariableName', value)}>
+          <Select value={chop.targetVariableName} onValueChange={(value) => updateChop(chop.id, { targetVariableName: value })}>
             <SelectTrigger className="text-xs">
               <SelectValue placeholder="Select numeric variable…" />
             </SelectTrigger>
@@ -784,16 +789,19 @@ function ChopProperties() {
 }
 
 export function PropertiesPanel() {
-  const { selectedLayer, rive } = useEditorStore()
+  const { selectedLayer, rive, chops } = useEditorStore()
+  const selectedChopId = selectedLayer.startsWith('chop:') ? selectedLayer.slice(5) : null
+  const selectedChop = selectedChopId ? chops.find((entry) => entry.id === selectedChopId) : null
 
   const LAYER_META = {
     rive: { label: 'Rive Animation', sub: rive.fileName || 'No file loaded', Icon: Eye },
     llm: { label: 'LLM', sub: 'GPT Realtime', Icon: Bot },
     face: { label: 'Face Tracker Webcam', sub: 'MediaPipe', Icon: Camera },
-    chop: { label: 'CHOP', sub: 'Channel Operator', Icon: SlidersHorizontal },
   }
 
-  const meta = LAYER_META[selectedLayer]
+  const meta = selectedChop
+    ? { label: selectedChop.name, sub: 'Channel Operator', Icon: SlidersHorizontal }
+    : LAYER_META[(selectedLayer.startsWith('chop:') ? 'llm' : selectedLayer) as keyof typeof LAYER_META]
   const { Icon } = meta
 
   return (
@@ -814,7 +822,7 @@ export function PropertiesPanel() {
           {selectedLayer === 'rive' && <RiveProperties />}
           {selectedLayer === 'llm' && <LLMProperties />}
           {selectedLayer === 'face' && <FaceTrackerProperties />}
-          {selectedLayer === 'chop' && <ChopProperties />}
+          {selectedChopId && <ChopProperties chopId={selectedChopId} />}
         </ScrollAreaContent>
       </CardContent>
     </Card>

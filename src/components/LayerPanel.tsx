@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useEditorStore, type LayerKey } from '@/lib/viewmodels/useEditorStore'
+import { useEditorStore, type BaseLayerKey } from '@/lib/viewmodels/useEditorStore'
 import { cn } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
 import { configSerializer } from '@/lib/config/configSerializer'
@@ -16,15 +16,14 @@ import { logger } from '@/lib/observability/logger'
 import { saveRiveFile, bufferToBlobUrl } from '@/lib/services/riveFileStorage'
 import { riveControllerRef } from '@/lib/viewmodels/riveController'
 
-const LAYERS: { key: LayerKey; label: string; Icon: React.ElementType }[] = [
+const BASE_LAYERS: { key: BaseLayerKey; label: string; Icon: React.ElementType }[] = [
   { key: 'rive', label: 'Rive animation', Icon: Eye },
   { key: 'llm', label: 'LLM provider', Icon: Bot },
   { key: 'face', label: 'Face tracker', Icon: Camera },
-  { key: 'chop', label: 'CHOP', Icon: SlidersHorizontal },
 ]
 
 export function LayerPanel() {
-  const { selectedLayer, setSelectedLayer, rive, clearRive, resetRive } = useEditorStore()
+  const { selectedLayer, setSelectedLayer, rive, clearRive, resetRive, chops, addChop } = useEditorStore()
   const riveInputRef = useRef<HTMLInputElement>(null)
   const configInputRef = useRef<HTMLInputElement>(null)
 
@@ -126,12 +125,24 @@ export function LayerPanel() {
       <div className="px-3 flex-1">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-xs font-semibold text-foreground">Modules</span>
-          <Button variant="ghost" size="icon" className="size-5 text-muted-foreground">
-            <Plus className="size-3" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-5 text-muted-foreground">
+                <Plus className="size-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52 bg-zinc-900 border-zinc-700/60 text-zinc-100 p-1.5">
+              <DropdownMenuItem
+                onClick={() => { addChop(); logger.log('system', 'CHOP added') }}
+                className="text-xs font-light focus:bg-zinc-800 focus:text-zinc-100 px-3 py-1.5"
+              >
+                Add CHOP
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex flex-col gap-0.5">
-          {LAYERS.map(({ key, label, Icon }) => (
+          {BASE_LAYERS.map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => setSelectedLayer(key)}
@@ -146,6 +157,24 @@ export function LayerPanel() {
               <span className="truncate">{label}</span>
             </button>
           ))}
+          {chops.map((chop) => {
+            const key = `chop:${chop.id}` as const
+            return (
+              <button
+                key={key}
+                onClick={() => setSelectedLayer(key)}
+                className={cn(
+                  'flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-xs font-light transition-colors',
+                  selectedLayer === key
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                )}
+              >
+                <SlidersHorizontal className="size-3.5 shrink-0" />
+                <span className="truncate">{chop.name}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>

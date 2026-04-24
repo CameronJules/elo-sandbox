@@ -1,7 +1,20 @@
 import { create } from 'zustand'
 
-export type LayerKey = 'rive' | 'llm' | 'face' | 'chop'
+export type BaseLayerKey = 'rive' | 'llm' | 'face'
+export type LayerKey = BaseLayerKey | `chop:${string}`
 export type SessionStatus = 'idle' | 'connecting' | 'connected' | 'error'
+
+export interface ChopDef {
+  id: string
+  name: string
+  enabled: boolean
+  selectedFeedId: string
+  transformCode: string
+  targetVariableName: string
+  lastInput: number | null
+  lastOutput: number | null
+  error: string
+}
 
 export interface ToolDef {
   id: string
@@ -56,15 +69,7 @@ interface EditorState {
     active: boolean
   }
 
-  chop: {
-    enabled: boolean
-    selectedFeedId: string
-    transformCode: string
-    targetVariableName: string
-    lastInput: number | null
-    lastOutput: number | null
-    error: string
-  }
+  chops: ChopDef[]
 
   setSelectedLayer(layer: LayerKey): void
   setEmotion(emotion: string): void
@@ -84,7 +89,9 @@ interface EditorState {
   setVariableValue(name: string, value: number | boolean | string | null): void
 
   setFaceTrackerField<K extends keyof EditorState['faceTracker']>(key: K, value: EditorState['faceTracker'][K]): void
-  setChopField<K extends keyof EditorState['chop']>(key: K, value: EditorState['chop'][K]): void
+  addChop(): string
+  updateChop(id: string, patch: Partial<ChopDef>): void
+  deleteChop(id: string): void
 
   addTool(tool: ToolDef): void
   updateTool(id: string, patch: Partial<ToolDef>): void
@@ -127,15 +134,7 @@ export const useEditorStore = create<EditorState>((set) => ({
     active: false,
   },
 
-  chop: {
-    enabled: false,
-    selectedFeedId: 'face.position.x',
-    transformCode: 'return value',
-    targetVariableName: '',
-    lastInput: null,
-    lastOutput: null,
-    error: '',
-  },
+  chops: [],
 
   setSelectedLayer: (layer) => set({ selectedLayer: layer }),
   setEmotion: (emotion) => set({ emotion }),
@@ -182,8 +181,43 @@ export const useEditorStore = create<EditorState>((set) => ({
     }),
 
   setFaceTrackerField: (key, value) => set((s) => ({ faceTracker: { ...s.faceTracker, [key]: value } })),
-  setChopField: (key, value) =>
-    set((s) => (s.chop[key] === value ? s : { chop: { ...s.chop, [key]: value } })),
+  addChop: () => {
+    const id = `chop_${Date.now()}`
+    set((s) => ({
+      chops: [
+        ...s.chops,
+        {
+          id,
+          name: `CHOP ${s.chops.length + 1}`,
+          enabled: false,
+          selectedFeedId: 'face.position.x',
+          transformCode: 'return value',
+          targetVariableName: '',
+          lastInput: null,
+          lastOutput: null,
+          error: '',
+        },
+      ],
+      selectedLayer: `chop:${id}`,
+    }))
+    return id
+  },
+  updateChop: (id, patch) =>
+    set((s) => {
+      let changed = false
+      const chops = s.chops.map((chop) => {
+        if (chop.id !== id) return chop
+        const next = { ...chop, ...patch }
+        changed ||= JSON.stringify(next) !== JSON.stringify(chop)
+        return next
+      })
+      return changed ? { chops } : s
+    }),
+  deleteChop: (id) =>
+    set((s) => ({
+      chops: s.chops.filter((chop) => chop.id !== id),
+      selectedLayer: s.selectedLayer === `chop:${id}` ? 'llm' : s.selectedLayer,
+    })),
 
   addTool: (tool) => set((s) => ({ session: { ...s.session, tools: [...s.session.tools, tool] } })),
   updateTool: (id, patch) => set((s) => ({

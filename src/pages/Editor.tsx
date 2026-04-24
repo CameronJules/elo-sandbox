@@ -33,12 +33,14 @@ function persistedConfigFromState(state: ReturnType<typeof useEditorStore.getSta
       smoothing: state.faceTracker.smoothing,
       sensitivity: state.faceTracker.sensitivity,
     },
-    chop: {
-      enabled: state.chop.enabled,
-      selectedFeedId: state.chop.selectedFeedId,
-      transformCode: state.chop.transformCode,
-      targetVariableName: state.chop.targetVariableName,
-    },
+    chops: state.chops.map(({ id, name, enabled, selectedFeedId, transformCode, targetVariableName }) => ({
+      id,
+      name,
+      enabled,
+      selectedFeedId,
+      transformCode,
+      targetVariableName,
+    })),
   }
 }
 
