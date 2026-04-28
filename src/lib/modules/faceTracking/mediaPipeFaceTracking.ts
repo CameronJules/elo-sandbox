@@ -37,20 +37,29 @@ class MediaPipeFaceTracking implements FaceTrackingModule {
   async start(video: HTMLVideoElement): Promise<void> {
     logger.log('face', 'Initializing MediaPipe FaceLandmarker')
     const filesetResolver = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm',
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.34/wasm',
     )
-    this.landmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
-      baseOptions: {
-        modelAssetPath:
-          'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-        delegate: 'GPU',
-      },
-      runningMode: 'VIDEO',
-      numFaces: 1,
-      outputFaceBlendshapes: true,
-    })
+    const modelAssetPath =
+      'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
+    try {
+      this.landmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: { modelAssetPath, delegate: 'GPU' },
+        runningMode: 'VIDEO',
+        numFaces: 1,
+        outputFaceBlendshapes: true,
+      })
+      logger.log('face', 'FaceLandmarker ready (GPU)')
+    } catch {
+      logger.log('face', 'GPU delegate failed, falling back to CPU')
+      this.landmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: { modelAssetPath, delegate: 'CPU' },
+        runningMode: 'VIDEO',
+        numFaces: 1,
+        outputFaceBlendshapes: true,
+      })
+      logger.log('face', 'FaceLandmarker ready (CPU)')
+    }
     this.running = true
-    logger.log('face', 'FaceLandmarker ready — starting detection loop')
     this.loop(video)
   }
 
