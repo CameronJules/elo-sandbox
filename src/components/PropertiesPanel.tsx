@@ -21,9 +21,20 @@ import { MockLLMProvider } from '@/lib/modules/llm/mockProvider'
 import { microphoneService } from '@/lib/services/microphoneService'
 import type { RealtimeLLMProvider } from '@/lib/modules/llm/llm.interface'
 import { getChopFeeds } from '@/lib/modules/chop/chopFeedRegistry'
+import { buildLLMTools, executeToolCall } from '@/lib/modules/llm/toolRuntime'
 
 const providerRef = { current: null as RealtimeLLMProvider | null }
 const audioRef = { current: null as HTMLAudioElement | null }
+
+function toToolName(name: string): string {
+  const normalized = name
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[^a-zA-Z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase()
+
+  return `set_${normalized || 'enum'}`
+}
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -311,6 +322,10 @@ function ToolEditorContent({
   }
 
   const selectedVariable = rive.variables.find((v) => v.name === tool.variableName) ?? null
+  const isEnumValueSelector = tool.actionType === 'enumValueSelector'
+  const variableOptions = isEnumValueSelector
+    ? rive.variables.filter((v) => v.type === 'enumType')
+    : rive.variables.filter((v) => v.type !== 'trigger')
 
   return (
     <div className="flex flex-col gap-0">
@@ -362,46 +377,71 @@ function ToolEditorContent({
           <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">Action</Label>
           <Select
             value={tool.actionType ?? 'animationControl'}
-            onValueChange={(v) => save({ actionType: v as 'animationControl' })}
+            onValueChange={(v) => save({
+              actionType: v as ToolDef['actionType'],
+              variableName: '',
+              actionValue: null,
+            })}
           >
             <SelectTrigger className="h-7 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="animationControl" className="text-xs">Animation Control</SelectItem>
+              <SelectGroup>
+                <SelectItem value="animationControl" className="text-xs">Fixed Animation Control</SelectItem>
+                <SelectItem value="enumValueSelector" className="text-xs">Enum Value Selector</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex flex-col gap-1">
           <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">Variable</Label>
-          {rive.variables.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">Load a Rive file first</p>
+          {variableOptions.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">
+              {isEnumValueSelector ? 'Load a Rive file with enum variables first' : 'Load a Rive file first'}
+            </p>
           ) : (
             <Select
               value={tool.variableName ?? ''}
-              onValueChange={(v) => save({ variableName: v, actionValue: null })}
+              onValueChange={(v) => {
+                const nextVariable = rive.variables.find((entry) => entry.name === v)
+                const nextPatch: Partial<ToolDef> = { variableName: v, actionValue: null }
+
+                if (isEnumValueSelector && nextVariable?.type === 'enumType') {
+                  if (!tool.name.trim()) nextPatch.name = toToolName(nextVariable.name)
+                  if (!tool.description.trim()) {
+                    nextPatch.description = `Set ${nextVariable.name} to the enum value whose name best matches the requested function.`
+                  }
+                }
+
+                save(nextPatch)
+              }}
             >
               <SelectTrigger className="h-7 text-xs">
                 <SelectValue placeholder="Select variable…" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  {rive.variables
-                    .filter((v) => v.type !== 'trigger')
-                    .map((v) => (
-                      <SelectItem key={v.name} value={v.name} className="text-xs">
-                        {v.name}
-                        <span className="ml-1 text-muted-foreground">({v.type})</span>
-                      </SelectItem>
-                    ))}
+                  {variableOptions.map((v) => (
+                    <SelectItem key={v.name} value={v.name} className="text-xs">
+                      {v.name}
+                      <span className="ml-1 text-muted-foreground">({v.type})</span>
+                    </SelectItem>
+                  ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
           )}
         </div>
 
-        {selectedVariable && (
+        {isEnumValueSelector && selectedVariable?.type === 'enumType' && (
+          <div className="rounded-md border border-border/40 bg-muted px-3 py-2 text-xs text-muted-foreground">
+            {selectedVariable.enumValues?.length ?? 0} enum values will be exposed to the model as selectable values.
+          </div>
+        )}
+
+        {!isEnumValueSelector && selectedVariable && (
           <div className="flex flex-col gap-1">
             <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">Value</Label>
             <ToolValueInput
@@ -443,27 +483,8 @@ function LLMProperties() {
         logger.log('llm', 'Audio response received')
       })
       provider.onToolCall((call) => {
-        const { session, rive } = useEditorStore.getState()
-        const tool = session.tools.find((t) => t.name === call.name)
-
-        if (tool?.actionType === 'animationControl' && tool.variableName != null) {
-          const variable = rive.variables.find((v) => v.name === tool.variableName)
-          if (variable) {
-            const KIND_MAP: Record<string, 'number' | 'enum' | 'boolean' | 'trigger' | 'string' | 'color'> = {
-              number: 'number', integer: 'number', boolean: 'boolean',
-              enumType: 'enum', string: 'string', color: 'color',
-            }
-            const kind = KIND_MAP[variable.type]
-            if (kind) {
-              riveControllerRef.current?.executeAction({ kind, prop: tool.variableName, value: tool.actionValue ?? '' })
-            }
-          }
-        }
-
-        if (call.name === 'setEmotion') {
-          useEditorStore.getState().setEmotion((call.args as { emotion: string }).emotion)
-        }
-        provider.respondToolCall(call.id, { success: true })
+        const result = executeToolCall(call)
+        provider.respondToolCall(call.id, result)
         logger.log('llm', `Tool call: ${call.name}`)
       })
       provider.onTranscript((delta, role) => {
@@ -479,7 +500,7 @@ function LLMProperties() {
       await provider.connect({
         voice: session.voice,
         systemPrompt: session.systemPrompt,
-        tools: session.tools.map(({ name, description, parameters }) => ({ name, description, parameters })),
+        tools: buildLLMTools(session.tools, useEditorStore.getState().rive.variables),
         model: 'gpt-4o-realtime-preview-2024-12-17',
         interruptions: session.interruptions,
         vadThreshold: session.vadThreshold,

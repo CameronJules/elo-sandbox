@@ -66,7 +66,9 @@ function normalizeTools(tools: unknown): ToolDef[] {
       parameters: typeof candidate?.parameters === 'object' && candidate.parameters != null
         ? candidate.parameters as Record<string, unknown>
         : { type: 'object', properties: {}, required: [] },
-      actionType: candidate?.actionType === 'animationControl' ? candidate.actionType : undefined,
+      actionType: candidate?.actionType === 'animationControl' || candidate?.actionType === 'enumValueSelector'
+        ? candidate.actionType
+        : undefined,
       variableName: typeof candidate?.variableName === 'string' ? candidate.variableName : undefined,
       actionValue: candidate?.actionValue ?? null,
     }

@@ -21,7 +21,7 @@ export interface ToolDef {
   name: string
   description: string
   parameters: Record<string, unknown>
-  actionType?: 'animationControl'
+  actionType?: 'animationControl' | 'enumValueSelector'
   variableName?: string
   actionValue?: string | number | boolean | null
 }

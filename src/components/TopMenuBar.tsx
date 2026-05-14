@@ -9,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useEditorStore } from '@/lib/viewmodels/useEditorStore'
-import { riveControllerRef } from '@/lib/viewmodels/riveController'
 import { configSerializer } from '@/lib/config/configSerializer'
 import { logger } from '@/lib/observability/logger'
 import { OpenAIRealtimeProvider } from '@/lib/modules/llm/openaiRealtimeProvider'
@@ -17,6 +16,7 @@ import { MockLLMProvider } from '@/lib/modules/llm/mockProvider'
 import { microphoneService } from '@/lib/services/microphoneService'
 import { useRef } from 'react'
 import type { RealtimeLLMProvider } from '@/lib/modules/llm/llm.interface'
+import { buildLLMTools, executeToolCall } from '@/lib/modules/llm/toolRuntime'
 
 const providerRef = { current: null as RealtimeLLMProvider | null }
 const audioRef = { current: null as HTMLAudioElement | null }
@@ -48,27 +48,8 @@ export function TopMenuBar() {
         logger.log('llm', 'Audio response received')
       })
       provider.onToolCall((call) => {
-        const { session, rive } = useEditorStore.getState()
-        const tool = session.tools.find((t) => t.name === call.name)
-
-        if (tool?.actionType === 'animationControl' && tool.variableName != null) {
-          const variable = rive.variables.find((v) => v.name === tool.variableName)
-          if (variable) {
-            const KIND_MAP: Record<string, 'number' | 'enum' | 'boolean' | 'trigger' | 'string' | 'color'> = {
-              number: 'number', integer: 'number', boolean: 'boolean',
-              enumType: 'enum', string: 'string', color: 'color',
-            }
-            const kind = KIND_MAP[variable.type]
-            if (kind) {
-              riveControllerRef.current?.executeAction({ kind, prop: tool.variableName, value: tool.actionValue ?? '' })
-            }
-          }
-        }
-
-        if (call.name === 'setEmotion') {
-          useEditorStore.getState().setEmotion((call.args as { emotion: string }).emotion)
-        }
-        provider.respondToolCall(call.id, { success: true })
+        const result = executeToolCall(call)
+        provider.respondToolCall(call.id, result)
         logger.log('llm', `Tool call: ${call.name}`)
       })
       provider.onTranscript((delta, role) => {
@@ -84,7 +65,7 @@ export function TopMenuBar() {
       await provider.connect({
         voice: session.voice,
         systemPrompt: session.systemPrompt,
-        tools: session.tools.map(({ name, description, parameters }) => ({ name, description, parameters })),
+        tools: buildLLMTools(session.tools, useEditorStore.getState().rive.variables),
         model: 'gpt-4o-realtime-preview-2024-12-17',
         interruptions: session.interruptions,
         vadThreshold: session.vadThreshold,
