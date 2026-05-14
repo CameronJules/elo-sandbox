@@ -10,10 +10,10 @@ import { cn } from '@/lib/utils'
 function LogLine({ entry }: { entry: LogEntry }) {
   return (
     <div className="flex items-center gap-2 font-mono text-[11px] py-1.5 font-extralight">
-      <span className="text-grey-800 shrink-0">{entry.ts}</span>
+      <span className="shrink-0 text-muted-foreground">{entry.ts}</span>
       <span className={cn(
         'min-w-0 flex-1',
-        entry.level === 'error' ? 'text-destructive' : entry.level === 'warn' ? 'text-yellow-500' : 'text-gray-500',
+        entry.level === 'error' ? 'text-destructive' : entry.level === 'warn' ? 'text-amber-500' : 'text-muted-foreground',
       )}>
         {entry.message}
       </span>

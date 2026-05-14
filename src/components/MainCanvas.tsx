@@ -9,6 +9,7 @@ import { useTelemetry } from '@/lib/observability/telemetryStore'
 import { saveRiveFile, bufferToBlobUrl } from '@/lib/services/riveFileStorage'
 import { riveControllerRef } from '@/lib/viewmodels/riveController'
 import { Upload } from 'lucide-react'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 function useRiveUpload() {
   const resetRive = useEditorStore((s) => s.resetRive)
@@ -70,7 +71,7 @@ export function MainCanvas() {
     <div className="flex flex-col h-full">
       {/* View model + state machine selectors — only when a file is loaded */}
       {hasFile && (
-        <div className="flex items-center gap-4 border-b px-4 py-2">
+        <div className="flex items-center gap-4 border-b bg-card px-4 py-2">
           <span className="text-xs text-muted-foreground">View Model</span>
           {rive.availableViewModels.length > 0 ? (
             <Select value={rive.viewModelName} onValueChange={setViewModelName}>
@@ -106,6 +107,10 @@ export function MainCanvas() {
           ) : (
             <span className="text-xs text-muted-foreground italic">Loading…</span>
           )}
+
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
         </div>
       )}
 

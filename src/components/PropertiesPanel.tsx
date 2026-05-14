@@ -191,8 +191,8 @@ function RiveProperties() {
           {variables.map((v) => (
             <div key={v.name} className="flex flex-col gap-1.5">
               <span className="text-xs truncate">
-                <span className="text-gray-800">{v.name}</span>
-                <span className="text-gray-400 ml-1.5">{v.type}</span>
+                <span className="text-foreground">{v.name}</span>
+                <span className="ml-1.5 text-muted-foreground">{v.type}</span>
               </span>
               <VariableControl variable={v} />
             </div>
@@ -736,7 +736,7 @@ function ChopProperties({ chopId }: { chopId: string }) {
           onChange={(e) => updateChop(chop.id, { transformCode: e.target.value })}
           rows={5}
           spellCheck={false}
-          className="min-h-[132px] resize-y border-zinc-800 bg-zinc-950 font-mono text-xs text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-zinc-500"
+          className="min-h-[132px] resize-y bg-muted font-mono text-xs"
           placeholder="return value * 100"
         />
       </Row>

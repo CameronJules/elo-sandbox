@@ -80,23 +80,23 @@ export function LayerPanel() {
               <ChevronDown className="size-3.5 shrink-0 ml-2 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52 bg-zinc-900 border-zinc-700/60 text-zinc-100 p-1.5">
-            <DropdownMenuItem onClick={() => { configSerializer.save(); logger.log('system', 'Config saved') }} className="text-xs font-light focus:bg-zinc-800 focus:text-zinc-100 px-3 py-1.5">
+          <DropdownMenuContent align="end" className="w-52 p-1.5">
+            <DropdownMenuItem onClick={() => { configSerializer.save(); logger.log('system', 'Config saved') }} className="px-3 py-1.5 text-xs font-light">
               Save config
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => configSerializer.exportJSON()} className="text-xs font-light focus:bg-zinc-800 focus:text-zinc-100 px-3 py-1.5">
+            <DropdownMenuItem onClick={() => configSerializer.exportJSON()} className="px-3 py-1.5 text-xs font-light">
               Export JSON
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => configInputRef.current?.click()} className="text-xs font-light focus:bg-zinc-800 focus:text-zinc-100 px-3 py-1.5">
+            <DropdownMenuItem onClick={() => configInputRef.current?.click()} className="px-3 py-1.5 text-xs font-light">
               Load config
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-zinc-700/60" />
-            <DropdownMenuItem onClick={() => riveInputRef.current?.click()} className="text-xs font-light focus:bg-zinc-800 focus:text-zinc-100 px-3 py-1.5">
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => riveInputRef.current?.click()} className="px-3 py-1.5 text-xs font-light">
               Replace Rive file
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => { riveControllerRef.current = null; clearRive() }}
-              className="text-xs font-light text-red-400 focus:bg-zinc-800 focus:text-red-400 px-3 py-1.5"
+              className="px-3 py-1.5 text-xs font-light text-destructive focus:text-destructive"
             >
               Remove Rive file
             </DropdownMenuItem>
@@ -131,10 +131,10 @@ export function LayerPanel() {
                 <Plus className="size-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 bg-zinc-900 border-zinc-700/60 text-zinc-100 p-1.5">
+            <DropdownMenuContent align="end" className="w-52 p-1.5">
               <DropdownMenuItem
                 onClick={() => { addChop(); logger.log('system', 'CHOP added') }}
-                className="text-xs font-light focus:bg-zinc-800 focus:text-zinc-100 px-3 py-1.5"
+                className="px-3 py-1.5 text-xs font-light"
               >
                 Add CHOP
               </DropdownMenuItem>
